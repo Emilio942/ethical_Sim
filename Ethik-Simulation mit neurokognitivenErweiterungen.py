@@ -1676,10 +1676,25 @@ class NeuralEthicalSociety:
             
             # Kognitive Stile berücksichtigen
             # Narrative und emotionale Denker bevorzugen mehr soziale Verbindungen
+            # Kognitive Stile berücksichtigen
+            # Narrative und emotionale Denker bevorzugen mehr soziale Verbindungen
             narrative_factor = 0
             for agent in [agent1, agent2]:
+                if agent.cognitive_architecture.primary_processing == NeuralProcessingType.NARRATIVE:
+                    narrative_factor += 0.2
+                elif agent.cognitive_architecture.primary_processing == NeuralProcessingType.EMOTIONAL:
+                    narrative_factor += 0.15
+                
+            # Erhöhung der Verbindungswahrscheinlichkeit für sozial orientierte Denkstile
+            prob += narrative_factor
+            
+            # Verbindung mit berechneter Wahrscheinlichkeit erstellen
+            if np.random.random() < min(prob, 0.95):  # Max 95% Wahrscheinlichkeit
+                # Verbindungsstärke basierend auf Ähnlichkeit
+                strength = 0.3 + 0.7 * similarity
+                self.add_social_connection(agent1_id, agent2_id, strength)
 
-# Fortsetzung der NeuralEthicalSociety-Klasse
+
 
     def _calculate_cognitive_style_similarity(self, agent1: NeuralEthicalAgent, 
                                            agent2: NeuralEthicalAgent) -> float:
