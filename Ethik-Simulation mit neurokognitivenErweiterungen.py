@@ -2344,7 +2344,117 @@ class NeuralEthicalSociety:
         # Weitere Metriken können hier hinzugefügt werden
         
         return 0.0
+    def _calculate_polarization_at_step(self, step: int) -> Dict[str, Dict[str, float]]:
+        """Berechnet die Polarisierungsmetriken für Überzeugungen zu einem bestimmten Simulationsschritt."""
+        polarization = {}
+        
+        # Alle Überzeugungen über alle Agenten sammeln
+        all_beliefs = set()
+        for agent in self.agents.values():
+            all_beliefs.update(agent.beliefs.keys())
+        
+        # Für jede Überzeugung die Stärken über Agenten hinweg sammeln
+        for belief_name in all_beliefs:
+            # Überzeugungsstärken für diese Überzeugung sammeln
+            belief_strengths = []
+            for agent in self.agents.values():
+                if belief_name in agent.beliefs:
+                    # Historische Daten verwenden, falls verfügbar
+                    if (belief_name in agent.belief_strength_history and 
+                        len(agent.belief_strength_history[belief_name]) > step):
+                        strength = agent.belief_strength_history[belief_name][step]
+                    else:
+                        strength = agent.beliefs[belief_name].strength
+                    belief_strengths.append(strength)
+            
+            if belief_strengths:
+                # Polarisierungsmetriken berechnen
+                hist, _ = np.histogram(belief_strengths, bins=10, range=(0, 1))
+                bimodality = self._calculate_bimodality(hist)
+                
+                # Varianz berechnen
+                variance = np.var(belief_strengths)
+                
+                # Entropie berechnen
+                hist_norm = hist / np.sum(hist) if np.sum(hist) > 0 else hist
+                hist_norm = hist_norm[hist_norm > 0]  # Nur positive Werte für Entropie
+                entropy_value = entropy(hist_norm) if len(hist_norm) > 0 else 0
+                
+                polarization[belief_name] = {
+                    "bimodality": bimodality,
+                    "variance": variance,
+                    "entropy": entropy_value
+                }
+        
+        return polarization
     
+    def _identify_belief_clusters(self) -> List[Dict]:
+        """Identifiziert Cluster von Agenten mit ähnlichen Überzeugungsmustern."""
+        # Hierarchisches Clustering basierend auf Überzeugungsähnlichkeit
+        if len(self.agents) < 2:
+            return []
+            
+        # Ähnlichkeitsmatrix zwischen allen Agenten erstellen
+        agent_ids = list(self.agents.keys())
+        similarity_matrix = np.zeros((len(agent_ids), len(agent_ids)))
+        
+        for i, agent1_id in enumerate(agent_ids):
+            for j, agent2_id in enumerate(agent_ids):
+                if i == j:
+                    similarity_matrix[i][j] = 1.0  # Perfekte Ähnlichkeit mit sich selbst
+                elif i < j:  # Nur einmal pro Paar berechnen
+                    agent1 = self.agents[agent1_id]
+                    agent2 = self.agents[agent2_id]
+                    similarity = self._calculate_belief_similarity(agent1, agent2)
+                    similarity_matrix[i][j] = similarity
+                    similarity_matrix[j][i] = similarity  # Symmetrisch
+        
+        # Schwellenwert zur Cluster-Identifikation
+        similarity_threshold = 0.7  # Agenten mit >70% Überzeugungsähnlichkeit werden geclustert
+        clusters = []
+        
+        # Einfachen Clustering-Ansatz verwenden
+        for i, agent_id in enumerate(agent_ids):
+            # Alle Agenten mit hoher Ähnlichkeit finden
+            similar_agents = [agent_ids[j] for j in range(len(agent_ids)) 
+                            if similarity_matrix[i][j] > similarity_threshold]
+            
+            # Prüfen, ob dieser Agent bereits in einem Cluster ist
+            already_clustered = False
+            for cluster in clusters:
+                if agent_id in cluster["agents"]:
+                    already_clustered = True
+                    break
+                    
+            if not already_clustered and len(similar_agents) > 1:  # Mindestens der Agent selbst und ein weiterer
+                # Gemeinsame starke Überzeugungen in diesem Cluster identifizieren
+                common_beliefs = {}
+                for cluster_agent_id in similar_agents:
+                    agent = self.agents[cluster_agent_id]
+                    for belief_name, belief in agent.beliefs.items():
+                        if belief.strength > 0.7:  # Nur starke Überzeugungen berücksichtigen
+                            if belief_name not in common_beliefs:
+                                common_beliefs[belief_name] = 0
+                            common_beliefs[belief_name] += 1
+                
+                # Überzeugungen filtern, die bei mindestens der Hälfte des Clusters vorkommen
+                threshold = len(similar_agents) / 2
+                defining_beliefs = {belief: count for belief, count in common_beliefs.items() 
+                                if count >= threshold}
+                
+                clusters.append({
+                    "agents": similar_agents,
+                    "size": len(similar_agents),
+                    "average_similarity": np.mean([similarity_matrix[i][agent_ids.index(a)] 
+                                                for a in similar_agents if a != agent_id]),
+                    "defining_beliefs": defining_beliefs
+                })
+        
+        # Cluster nach Größe sortieren
+        clusters.sort(key=lambda x: x["size"], reverse=True)
+        
+        return clusters
+
     def analyze_results(self, results: Dict) -> Dict:
         """
         Analysiert die Simulationsergebnisse und extrahiert wichtige Einsichten.
@@ -2547,6 +2657,8 @@ class NeuralEthicalSociety:
                 }
         
         return style_divergence
+    
+
     
     def _calculate_ensemble_statistics(self, ensemble_stats: Dict) -> Dict:
         """Berechnet Statistiken über die Ensemble-Durchläufe."""
