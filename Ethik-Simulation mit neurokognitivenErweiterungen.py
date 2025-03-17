@@ -1,3 +1,4 @@
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -1793,7 +1794,6 @@ class NeuralEthicalSociety:
             similarity += 1.0 - abs(id1 - id2)
             
         return similarity / len(all_groups)
-    
     def run_robust_simulation(self, num_steps: int, 
                             scenario_probability: float = 0.2,
                             social_influence_probability: float = 0.3,
@@ -1937,6 +1937,14 @@ class NeuralEthicalSociety:
         # Ensemble-Ergebnisse kombinieren (für Robustheit)
         if self.robustness_settings["ensemble_size"] > 1:
             results = self._combine_ensemble_results(ensemble_results)
+            # Ensure validation key exists after combining results
+            if "validation" not in results:
+                results["validation"] = {
+                    "errors": [],
+                    "warnings": [],
+                    "agent_consistency": {},
+                    "simulation_stability": {}
+                }
         else:
             # Bei nur einem Durchlauf direkt übernehmen
             results["decisions"] = ensemble_results[0]["decisions"]
@@ -1948,7 +1956,8 @@ class NeuralEthicalSociety:
         if self.robustness_settings["validation_enabled"]:
             self._final_validation(results)
             
-        return results
+        return results    
+
     
     def _validate_belief_changes(self, agent_id: str, belief_changes: Dict[str, float]):
         """Validiert Überzeugungsänderungen auf Plausibilität."""
