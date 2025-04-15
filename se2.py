@@ -12,6 +12,7 @@ import random
 import pickle
 import logging
 import os
+import copy
 from typing import List, Dict, Tuple, Optional, Set, Union, Callable, Any
 
 # --- Verarbeitungstypen ---
@@ -2296,8 +2297,392 @@ class NeuralEthicalSociety:
     def run_robust_simulation(self, num_steps: int, scenario_probability: Optional[float] = None,
                                social_influence_probability: Optional[float] = None,
                                reflection_probability: Optional[float] = None) -> Dict[str, Any]:
-         # Platzhalter - Implementierung folgt
-         raise NotImplementedError("Simulation logic will be implemented in the next block.")
+        """
+        Führt eine robuste Simulation über mehrere Zeitschritte durch.
+        
+        Verwendet optional Ensemble-Läufe für erhöhte Robustheit gegen stochastische Effekte.
+        
+        Args:
+            num_steps: Anzahl der Zeitschritte
+            scenario_probability: Wahrscheinlichkeit, dass ein Agent auf ein Szenario trifft (0-1)
+            social_influence_probability: Wahrscheinlichkeit für sozialen Einfluss pro Agent (0-1)
+            reflection_probability: Wahrscheinlichkeit für Reflexion pro Agent (0-1)
+            
+        Returns:
+            Dictionary mit Simulationsergebnissen
+        """
+        # Standardwerte setzen, falls nicht angegeben
+        scenario_probability = scenario_probability or SIMULATION_DEFAULT_SCENARIO_PROB
+        social_influence_probability = social_influence_probability or SIMULATION_DEFAULT_SOCIAL_PROB
+        reflection_probability = reflection_probability or SIMULATION_DEFAULT_REFLECTION_PROB
+        
+        # Prüfen, ob Szenarien vorhanden sind
+        if not self.scenarios and scenario_probability > 0:
+            logging.warning("Keine Szenarien definiert, obwohl scenario_probability > 0.")
+            scenario_probability = 0.0
+        
+        # Ergebnis-Dictionary initialisieren
+        results = {
+            "agent_states": [],  # Speichert den Zustand jedes Agenten zu jedem Zeitschritt
+            "decisions": [],     # Speichert Entscheidungen
+            "belief_changes": [], # Speichert signifikante Belief-Änderungen
+            "social_influences": [], # Speichert soziale Einflüsse
+            "reflections": [],    # Speichert Reflexionsereignisse
+            "validation": self.validation_log # Validierungslog
+        }
+        
+        # Ensemble-Läufe (für mehr Robustheit)
+        ensemble_size = self.robustness_settings.get("ensemble_size", SIMULATION_DEFAULT_ENSEMBLE_SIZE)
+        ensemble_results = []
+        
+        logging.info(f"Starte Simulation mit {num_steps} Schritten, Ensemble-Größe: {ensemble_size}")
+        
+        # Führe die Ensemble-Läufe durch
+        for ensemble_run in range(ensemble_size):
+            logging.info(f"Ensemble-Lauf {ensemble_run+1}/{ensemble_size} gestartet")
+            
+            # Speichere die Anfangszustände der Agenten für diesen Lauf
+            run_results = {
+                "agent_states": [],
+                "decisions": [],
+                "belief_changes": [],
+                "social_influences": [],
+                "reflections": []
+            }
+            
+            # Speichere den Anfangszustand
+            initial_states = {}
+            for agent_id, agent in self.agents.items():
+                initial_states[agent_id] = self._get_agent_state(agent)
+            run_results["agent_states"].append(initial_states)
+            
+            # Führe die Simulation für n Zeitschritte durch
+            for step in range(num_steps):
+                self.current_step = step
+                step_decisions = {}
+                step_belief_changes = {}
+                step_social_influences = {}
+                step_reflections = {}
+                
+                # Kopiere die Agent-IDs, um Probleme zu vermeiden, falls Agenten während der Simulation entfernt werden
+                agent_ids = list(self.agents.keys())
+                
+                # Führe jeden Agenten durch den Zeitschritt
+                for agent_id in agent_ids:
+                    # Überspringe, falls der Agent nicht mehr existiert
+                    if agent_id not in self.agents:
+                        continue
+                    
+                    agent = self.agents[agent_id]
+                    agent.current_time = self.current_step  # Aktualisiere den Zeitstempel des Agenten
+                    
+                    try:
+                        # 1. Reflexion (falls aktiviert)
+                        if np.random.random() < reflection_probability:
+                            reflection_changes = agent.reflect_on_experiences()
+                            if reflection_changes:
+                                step_reflections[agent_id] = reflection_changes
+                        
+                        # 2. Szenario-Entscheidung und Lernen (falls aktiviert)
+                        if np.random.random() < scenario_probability and self.scenarios:
+                            # Wähle ein zufälliges Szenario
+                            scenario_id = random.choice(list(self.scenarios.keys()))
+                            scenario = self.scenarios[scenario_id]
+                            
+                            # Agent trifft Entscheidung und lernt daraus
+                            decision = agent.make_decision(scenario)
+                            chosen_option = decision["chosen_option"]
+                            step_decisions[agent_id] = decision
+                            
+                            # Agent lernt aus dem Ergebnis
+                            belief_updates = agent.update_beliefs_from_experience(scenario, chosen_option)
+                            if belief_updates:
+                                step_belief_changes[agent_id] = belief_updates
+                        
+                        # 3. Sozialer Einfluss (falls aktiviert)
+                        if np.random.random() < social_influence_probability and agent.social_connections:
+                            # Wähle einen zufälligen verbundenen Agenten
+                            connected_agents = [a_id for a_id in agent.social_connections if a_id in self.agents]
+                            if connected_agents:
+                                other_id = random.choice(connected_agents)
+                                other_agent = self.agents[other_id]
+                                
+                                # Aktualisiere basierend auf sozialem Einfluss
+                                social_updates = agent.update_from_social_influence(other_agent)
+                                if social_updates:
+                                    step_social_influences[agent_id] = {
+                                        "from": other_id,
+                                        "updates": social_updates
+                                    }
+                    
+                    except Exception as e:
+                        # Robustheit: Fehler für einen Agenten sollten nicht die gesamte Simulation stoppen
+                        if self.robustness_settings.get("resilience_to_outliers", True):
+                            logging.error(f"Fehler bei Agent {agent_id} in Schritt {step}: {e}")
+                            if self.robustness_settings.get("error_checking", True):
+                                import traceback
+                                logging.error(traceback.format_exc())
+                        else:
+                            # Wenn keine Resilienz gewünscht ist, Fehler weiterwerfen
+                            raise
+                
+                # Speichere die Ergebnisse dieses Schritts
+                if step_decisions:
+                    run_results["decisions"].append(step_decisions)
+                if step_belief_changes:
+                    run_results["belief_changes"].append(step_belief_changes)
+                if step_social_influences:
+                    run_results["social_influences"].append(step_social_influences)
+                if step_reflections:
+                    run_results["reflections"].append(step_reflections)
+                
+                # Speichere den Zustand aller Agenten nach diesem Schritt
+                step_states = {}
+                for agent_id, agent in self.agents.items():
+                    step_states[agent_id] = self._get_agent_state(agent)
+                run_results["agent_states"].append(step_states)
+                
+                # Führe periodische Validierungen durch
+                if step % SIMULATION_VALIDATION_INTERVAL == 0 or step == num_steps - 1:
+                    self._validate_simulation_state()
+            
+            # Ensemble-Ergebnisse speichern
+            ensemble_results.append(run_results)
+        
+        # Kombiniere die Ensemble-Ergebnisse
+        results = self._combine_ensemble_results(ensemble_results)
+        
+        # Führe eine finale Validierung durch
+        self._validate_simulation_state(final=True)
+        results["validation"] = self.validation_log
+        
+        logging.info(f"Simulation abgeschlossen: {num_steps} Schritte, {ensemble_size} Ensemble-Läufe")
+        return results
+    
+    def _get_agent_state(self, agent: NeuralEthicalAgent) -> Dict[str, Any]:
+        """Extrahiert den aktuellen Zustand eines Agenten (Beliefs, etc.)."""
+        state = {
+            "beliefs": {},
+            "personality": agent.personality_traits.copy(),
+            "moral_foundations": agent.moral_foundations.copy(),
+            "cognitive_architecture": {
+                "primary": agent.cognitive_architecture.primary_processing,
+                "secondary": agent.cognitive_architecture.secondary_processing,
+                "balance": agent.cognitive_architecture.processing_balance
+            },
+            "social_connections": agent.social_connections.copy(),
+            "group_identities": agent.group_identities.copy(),
+            "cognitive_dissonance": agent.calculate_cognitive_dissonance()
+        }
+        
+        # Belief-Zustände extrahieren
+        for name, belief in agent.beliefs.items():
+            state["beliefs"][name] = {
+                "strength": belief.strength,
+                "certainty": belief.certainty,
+                "valence": belief.emotional_valence,
+                "activation": belief.activation
+            }
+        
+        return state
+    
+    def _combine_ensemble_results(self, ensemble_results: List[Dict]) -> Dict[str, Any]:
+        """
+        Kombiniert die Ergebnisse mehrerer Ensemble-Läufe zu einem Ergebnis.
+        
+        Verwendung von Median/Mehrheitsentscheidung für Robustheit gegen Ausreißer.
+        """
+        combined = {
+            "agent_states": [],
+            "decisions": [],
+            "belief_changes": [],
+            "social_influences": [],
+            "reflections": [],
+            "ensemble_stats": {
+                "belief_strength_variance": [],  # Varianz über Ensemble-Läufe
+                "decision_consistency": []       # Konsistenz der Entscheidungen
+            }
+        }
+        
+        # Bestimme die maximale Anzahl an Schritten über alle Läufe
+        max_steps = max(len(run.get("agent_states", [])) for run in ensemble_results)
+        
+        # Kombiniere Agentenzustände (mit Median/Durchschnitt)
+        for step in range(max_steps):
+            step_states = {}
+            step_variance = {}
+            
+            # Alle vorhandenen Agent-IDs über alle Läufe
+            all_agent_ids = set()
+            for run in ensemble_results:
+                if step < len(run.get("agent_states", [])):
+                    all_agent_ids.update(run["agent_states"][step].keys())
+            
+            # Für jeden Agenten
+            for agent_id in all_agent_ids:
+                agent_states_across_runs = []
+                belief_strengths_across_runs = {}
+                
+                # Sammle Zustände des Agenten über alle Läufe
+                for run in ensemble_results:
+                    if step < len(run.get("agent_states", [])) and agent_id in run["agent_states"][step]:
+                        agent_states_across_runs.append(run["agent_states"][step][agent_id])
+                        
+                        # Sammle Belief-Stärken für Varianzberechnung
+                        for belief_name, belief_data in run["agent_states"][step][agent_id].get("beliefs", {}).items():
+                            if belief_name not in belief_strengths_across_runs:
+                                belief_strengths_across_runs[belief_name] = []
+                            belief_strengths_across_runs[belief_name].append(belief_data.get("strength", 0.5))
+                
+                # Wenn dieser Agent in mindestens einem Lauf vorhanden war
+                if agent_states_across_runs:
+                    # Nehme den Median-Zustand für diesen Agenten (oder Durchschnitt, je nach Präferenz)
+                    median_state = agent_states_across_runs[len(agent_states_across_runs) // 2]
+                    step_states[agent_id] = median_state
+                    
+                    # Berechne Varianz der Belief-Stärken über Ensemble-Läufe
+                    belief_variances = {}
+                    for belief_name, strengths in belief_strengths_across_runs.items():
+                        if len(strengths) > 1:
+                            belief_variances[belief_name] = np.var(strengths)
+                    
+                    step_variance[agent_id] = belief_variances
+            
+            combined["agent_states"].append(step_states)
+            combined["ensemble_stats"]["belief_strength_variance"].append(step_variance)
+        
+        # Kombiniere Entscheidungen (mit Mehrheitsentscheidung)
+        for step in range(max_steps):
+            step_decisions = {}
+            decision_consistency = {}
+            
+            # Sammle alle Agenten, die in diesem Schritt eine Entscheidung getroffen haben
+            agents_with_decisions = set()
+            for run in ensemble_results:
+                if step < len(run.get("decisions", [])):
+                    agents_with_decisions.update(run["decisions"][step].keys())
+            
+            # Für jeden Agenten
+            for agent_id in agents_with_decisions:
+                decisions_across_runs = []
+                
+                # Sammle Entscheidungen des Agenten über alle Läufe
+                for run in ensemble_results:
+                    if step < len(run.get("decisions", [])) and agent_id in run["decisions"][step]:
+                        decisions_across_runs.append(run["decisions"][step][agent_id])
+                
+                # Wenn dieser Agent in mindestens einem Lauf eine Entscheidung getroffen hat
+                if decisions_across_runs:
+                    # Finde die häufigste Entscheidung (Mehrheitsentscheidung)
+                    scenario_id = decisions_across_runs[0].get("scenario_id")
+                    options_count = {}
+                    for decision in decisions_across_runs:
+                        option = decision.get("chosen_option")
+                        options_count[option] = options_count.get(option, 0) + 1
+                    
+                    # Die häufigste Option ist die Mehrheitsentscheidung
+                    majority_option = max(options_count.items(), key=lambda x: x[1])[0]
+                    majority_count = options_count[majority_option]
+                    
+                    # Berechne Konsistenz (Anteil der Läufe mit der Mehrheitsentscheidung)
+                    consistency = majority_count / len(decisions_across_runs)
+                    decision_consistency[agent_id] = consistency
+                    
+                    # Nehme die Entscheidung aus dem ersten Lauf und ersetze nur die Option
+                    combined_decision = decisions_across_runs[0].copy()
+                    combined_decision["chosen_option"] = majority_option
+                    combined_decision["ensemble_consistency"] = consistency
+                    step_decisions[agent_id] = combined_decision
+            
+            if step_decisions:
+                combined["decisions"].append(step_decisions)
+                combined["ensemble_stats"]["decision_consistency"].append(decision_consistency)
+        
+        # Bei belief_changes, social_influences und reflections könnten wir einfach alle Ereignisse kombinieren
+        # oder eine komplexere Logik implementieren, je nach Bedarf
+        # Hier führen wir sie einfach zusammen, behalten aber die Schrittstruktur bei
+        
+        for event_type in ["belief_changes", "social_influences", "reflections"]:
+            combined_events = []
+            
+            for step in range(max_steps):
+                step_events = {}
+                
+                for run in ensemble_results:
+                    if step < len(run.get(event_type, [])):
+                        for agent_id, event_data in run[event_type][step].items():
+                            # Einfaches Zusammenführen: Wenn ein Agent in mehreren Läufen Events hat,
+                            # nehmen wir das aus dem ersten Lauf, in dem es auftritt
+                            if agent_id not in step_events:
+                                step_events[agent_id] = event_data
+                
+                if step_events:
+                    combined_events.append(step_events)
+            
+            combined[event_type] = combined_events
+        
+        return combined
+    
+    def _validate_simulation_state(self, final: bool = False):
+        """
+        Überprüft den aktuellen Zustand der Simulation auf Anomalien.
+        
+        Protokolliert Warnungen/Fehler im validation_log.
+        """
+        if not self.robustness_settings.get("validation_enabled", True):
+            return
+        
+        validation_entry = {
+            "step": self.current_step,
+            "warnings": [],
+            "errors": [],
+            "metrics": {}
+        }
+        
+        # Prüfe Belief-Stärken und Dissonanz für jeden Agenten
+        for agent_id, agent in self.agents.items():
+            # Überprüfe auf große Änderungen in Beliefs
+            for belief_name, belief in agent.beliefs.items():
+                history = agent.belief_strength_history.get(belief_name, [])
+                if len(history) >= 2:
+                    last_change = abs(history[-1] - history[-2])
+                    if last_change > VALIDATION_LARGE_BELIEF_CHANGE_WARNING:
+                        validation_entry["warnings"].append(
+                            f"Agent {agent_id}: Große Änderung im Belief '{belief_name}': {last_change:.3f}"
+                        )
+            
+            # Überprüfe Dissonanz
+            dissonance = agent.calculate_cognitive_dissonance()
+            if dissonance > VALIDATION_HIGH_DISSONANCE_WARNING:
+                validation_entry["warnings"].append(
+                    f"Agent {agent_id}: Hohe kognitive Dissonanz: {dissonance:.3f}"
+                )
+        
+        # Prüfe auf extreme Polarisierung in den Beliefs
+        all_belief_names = set()
+        for agent in self.agents.values():
+            all_belief_names.update(agent.beliefs.keys())
+        
+        for belief_name in all_belief_names:
+            strengths = [agent.beliefs[belief_name].strength for agent in self.agents.values() 
+                         if belief_name in agent.beliefs]
+            
+            if len(strengths) >= 2:
+                polarization = self._calculate_polarization(strengths)
+                validation_entry["metrics"][f"polarization_{belief_name}"] = polarization
+                
+                if polarization > VALIDATION_EXTREME_POLARIZATION_THRESHOLD:
+                    validation_entry["warnings"].append(
+                        f"Extreme Polarisierung für Belief '{belief_name}': {polarization:.3f}"
+                    )
+        
+        # Speichere die Validierungsergebnisse
+        self.validation_log.append(validation_entry)
+        
+        # Bei finaler Validierung zusätzliche Metriken berechnen
+        if final:
+            # Finale Metriken hier berechnen und speichern
+            pass
 
     # --- Persistenz ---
     def save_simulation(self, filename: str):
@@ -2336,52 +2721,95 @@ class NeuralEthicalSociety:
         return (f"NeuralEthicalSociety(Agents: {len(self.agents)}, Scenarios: {len(self.scenarios)}, "
                 f"Groups: {len(self.groups)}, Edges: {self.social_network.number_of_edges()})")
 
-    def _calculate_polarization(self, belief_strengths: List[float], metric: str = 'bimodality') -> float:
+    def _calculate_polarization(self, input_data, metric: str = 'bimodality'):
         """
-        Berechnet eine Polarisierungsmetrik für die gegebenen Belief-Stärken.
+        Berechnet eine Polarisierungsmetrik für Beliefs.
+        
+        Überladene Funktion, die entweder:
+        1. Eine Liste von Belief-Stärken akzeptiert und eine einzelne Polarisierungsmetrik zurückgibt, oder
+        2. Ein Dictionary von Agenten akzeptiert und ein Dictionary von Polarisierungsmetriken pro Belief zurückgibt.
         
         Args:
-            belief_strengths: Liste der Belief-Stärken aller Agenten
+            input_data: Entweder List[float] (Belief-Stärken) oder Dict[str, NeuralEthicalAgent] (Agenten)
             metric: Welche Metrik verwendet werden soll ('bimodality', 'variance', etc.)
             
         Returns:
-            float: Polarisierungswert (0-1, höher = mehr polarisiert)
+            float oder Dict[str, Dict[str, float]]: Polarisierungswert(e)
         """
-        if not belief_strengths or len(belief_strengths) < 2:
-            return 0.0
-            
-        if metric == 'bimodality':
-            # Bimodalitätsindex basierend auf Pearson's Kurtosis und Varianz
-            # Werte nahe 1 deuten auf Bimodalität hin
-            mean = np.mean(belief_strengths)
-            variance = np.var(belief_strengths)
-            if variance == 0:
-                return 0.0  # Keine Polarisierung wenn alle Werte gleich sind
+        # Fall 1: input_data ist eine Liste von Belief-Stärken
+        if isinstance(input_data, list):
+            belief_strengths = input_data
+            if not belief_strengths or len(belief_strengths) < 2:
+                return 0.0
                 
-            # Kurtosis (4. Moment)
-            n = len(belief_strengths)
-            kurtosis = (n * sum((x - mean) ** 4 for x in belief_strengths)) / ((sum((x - mean) ** 2 for x in belief_strengths)) ** 2)
+            if metric == 'bimodality':
+                # Bimodalitätsindex basierend auf Pearson's Kurtosis und Varianz
+                # Werte nahe 1 deuten auf Bimodalität hin
+                mean = np.mean(belief_strengths)
+                variance = np.var(belief_strengths)
+                if variance == 0:
+                    return 0.0  # Keine Polarisierung wenn alle Werte gleich sind
+                    
+                # Kurtosis (4. Moment)
+                n = len(belief_strengths)
+                kurtosis = (n * sum((x - mean) ** 4 for x in belief_strengths)) / ((sum((x - mean) ** 2 for x in belief_strengths)) ** 2)
+                
+                # Bimodalitätskoeffizient
+                bimodality = (1 + kurtosis) / (3 + variance)
+                # Normalisieren von 0 bis 1
+                return min(1.0, max(0.0, (bimodality - 0.2) / 0.5))
+                
+            elif metric == 'variance':
+                # Varianz als einfache Polarisierungsmetrik
+                variance = np.var(belief_strengths)
+                # Normalisieren (typische Varianz für Beliefs zwischen 0-1 liegt zwischen 0 und 0.25)
+                return min(1.0, variance * 4)
+                
+            elif metric == 'extremity':
+                # Wie viele Agenten haben extreme Werte (nahe 0 oder 1)?
+                extremity_threshold = 0.2
+                extremes = sum(1 for x in belief_strengths if x < extremity_threshold or x > (1 - extremity_threshold))
+                return extremes / len(belief_strengths)
+                
+            else:
+                logging.warning(f"Unbekannte Polarisierungsmetrik: {metric}")
+                return 0.0
+        
+        # Fall 2: input_data ist ein Dictionary von Agenten
+        elif isinstance(input_data, dict):
+            agents = input_data
+            if not agents or len(agents) < 2:
+                return {}
             
-            # Bimodalitätskoeffizient
-            bimodality = (1 + kurtosis) / (3 + variance)
-            # Normalisieren von 0 bis 1
-            return min(1.0, max(0.0, (bimodality - 0.2) / 0.5))
+            # Sammle alle Beliefs über alle Agenten
+            all_beliefs = set()
+            for agent in agents.values():
+                all_beliefs.update(agent.beliefs.keys())
             
-        elif metric == 'variance':
-            # Varianz als einfache Polarisierungsmetrik
-            variance = np.var(belief_strengths)
-            # Normalisieren (typische Varianz für Beliefs zwischen 0-1 liegt zwischen 0 und 0.25)
-            return min(1.0, variance * 4)
+            # Berechne Polarisierung für jeden Belief
+            polarization_results = {}
+            for belief_name in all_beliefs:
+                # Sammle Stärken dieses Beliefs über alle Agenten
+                strengths = []
+                for agent in agents.values():
+                    if belief_name in agent.beliefs:
+                        strengths.append(agent.beliefs[belief_name].strength)
+                
+                if len(strengths) < 2:
+                    continue  # Überspringe Beliefs, die nicht von genug Agenten geteilt werden
+                
+                # Berechne für diesen Belief verschiedene Polarisierungsmetriken
+                polarization_results[belief_name] = {
+                    'bimodality': self._calculate_polarization(strengths, 'bimodality'),
+                    'variance': self._calculate_polarization(strengths, 'variance'),
+                    'extremity': self._calculate_polarization(strengths, 'extremity')
+                }
             
-        elif metric == 'extremity':
-            # Wie viele Agenten haben extreme Werte (nahe 0 oder 1)?
-            extremity_threshold = 0.2
-            extremes = sum(1 for x in belief_strengths if x < extremity_threshold or x > (1 - extremity_threshold))
-            return extremes / len(belief_strengths)
-            
+            return polarization_results
+        
         else:
-            logging.warning(f"Unbekannte Polarisierungsmetrik: {metric}")
-            return 0.0
+            logging.error(f"Ungültiger Datentyp für _calculate_polarization: {type(input_data)}")
+            return {} if isinstance(input_data, dict) else 0.0
 
 
 # Block 5: Simulation Execution in NeuralEthicalSociety
