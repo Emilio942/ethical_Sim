@@ -3,7 +3,7 @@ import random
 from typing import List, Dict, Tuple, Optional, Union, Callable
 
 # Import aus dem ersten Skript
-from neural_core import NeuralProcessingType, CognitiveArchitecture, NeuralEthicalBelief, EthicalScenario
+from .neural_core import NeuralProcessingType, CognitiveArchitecture, NeuralEthicalBelief, EthicalScenario # Corrected import
 
 class NeuralEthicalAgent:
     """Repräsentiert einen ethischen Agenten mit neuronalen Verarbeitungsmodellen."""

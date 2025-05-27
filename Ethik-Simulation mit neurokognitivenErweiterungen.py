@@ -9,9 +9,15 @@ from scipy.stats import entropy
 import seaborn as sns
 from tqdm import tqdm
 import random
-from typing import List, Dict, Tuple, Optional, Set, Union, Callable
+from typing import List, Dict, Tuple, Optional, Set, Union, Callable, Any # Added Any
 import pickle
 import os
+from ethik.visualization import ( # Added
+    visualize_neural_processing,
+    visualize_belief_network,
+    visualize_cognitive_style_comparison,
+    visualize_social_network
+)
 
 class NeuralProcessingType:
     """Repräsentiert unterschiedliche neuronale Verarbeitungsstile."""
@@ -2688,392 +2694,10 @@ class NeuralEthicalSociety:
             result["high_variance_beliefs"] = high_variance[:5]  # Top 5
         
         return result
-    
-    def visualize_neural_processing(self, agent_id: str):
-        """Visualisiert die neuronale Verarbeitung eines Agenten."""
-        if agent_id not in self.agents:
-            print(f"Agent {agent_id} nicht gefunden.")
-            return
-            
-        agent = self.agents[agent_id]
-        
-        # 1. Kognitive Architektur visualisieren
-        plt.figure(figsize=(15, 10))
-        
-        # 1.1 Aktuelle Überzeugungsaktivierung visualisieren
-        plt.subplot(2, 2, 1)
-        beliefs = list(agent.beliefs.keys())
-        activations = [agent.beliefs[b].activation for b in beliefs]
-        
-        # Sortieren nach Aktivierungsniveau
-        sorted_indices = np.argsort(activations)[::-1]
-        sorted_beliefs = [beliefs[i] for i in sorted_indices]
-        sorted_activations = [activations[i] for i in sorted_indices]
-        
-        # Nur die Top 10 anzeigen, falls mehr vorhanden
-        if len(sorted_beliefs) > 10:
-            sorted_beliefs = sorted_beliefs[:10]
-            sorted_activations = sorted_activations[:10]
-        
-        plt.barh(sorted_beliefs, sorted_activations, color='skyblue')
-        plt.xlabel('Aktivierungsniveau')
-        plt.title('Aktuelle Überzeugungsaktivierung')
-        plt.grid(axis='x', alpha=0.3)
-        
-        # 1.2 Kognitive Biases visualisieren
-        plt.subplot(2, 2, 2)
-        biases = list(agent.cognitive_architecture.cognitive_biases.keys())
-        bias_values = [agent.cognitive_architecture.cognitive_biases[b] for b in biases]
-        
-        plt.barh(biases, bias_values, color='salmon')
-        plt.xlabel('Ausprägung')
-        plt.title('Kognitive Biases')
-        plt.grid(axis='x', alpha=0.3)
-        
-        # 1.3 Verarbeitungsstile visualisieren
-        plt.subplot(2, 2, 3)
-        styles = [
-            f"Primär: {agent.cognitive_architecture.primary_processing}",
-            f"Sekundär: {agent.cognitive_architecture.secondary_processing}"
-        ]
-        style_weights = [
-            agent.cognitive_architecture.processing_balance,
-            1.0 - agent.cognitive_architecture.processing_balance
-        ]
-        
-        plt.barh(styles, style_weights, color='lightgreen')
-        plt.xlabel('Gewichtung')
-        plt.title('Kognitive Verarbeitungsstile')
-        plt.grid(axis='x', alpha=0.3)
-        
-        # 1.4 Emotionale Parameter visualisieren
-        plt.subplot(2, 2, 4)
-        emotions = list(agent.cognitive_architecture.emotional_parameters.keys())
-        emotion_values = [agent.cognitive_architecture.emotional_parameters[e] for e in emotions]
-        
-        plt.barh(emotions, emotion_values, color='gold')
-        plt.xlabel('Ausprägung')
-        plt.title('Emotionale Parameter')
-        plt.grid(axis='x', alpha=0.3)
-        
-        plt.tight_layout()
-        plt.suptitle(f"Neuronale Verarbeitung für Agent {agent_id}", fontsize=16)
-        plt.subplots_adjust(top=0.9)
-        plt.show()
-        
-        # 2. Überzeugungsnetzwerk mit Aktivierungsniveaus visualisieren
-        self.visualize_belief_network(agent_id, show_activation=True)
-    
-    def visualize_belief_network(self, agent_id: str, min_connection_strength: float = 0.2, 
-                               show_activation: bool = False):
-        """
-        Visualisiert das Netzwerk von Überzeugungen eines Agenten.
-        
-        Args:
-            agent_id: ID des zu visualisierenden Agenten
-            min_connection_strength: Minimale Verbindungsstärke für die Anzeige
-            show_activation: Ob Aktivierungsniveaus angezeigt werden sollen
-        """
-        if agent_id not in self.agents:
-            print(f"Agent {agent_id} nicht gefunden.")
-            return
-            
-        agent = self.agents[agent_id]
-        G = nx.DiGraph()
-        
-        # Knoten für jede Überzeugung hinzufügen
-        for belief_name, belief in agent.beliefs.items():
-            node_attrs = {
-                'strength': belief.strength, 
-                'category': belief.category,
-                'certainty': belief.certainty
-            }
-            
-            if show_activation:
-                node_attrs['activation'] = belief.activation
-                
-            G.add_node(belief_name, **node_attrs)
-            
-            # Kanten für Verbindungen hinzufügen
-            for conn_name, (strength, polarity) in belief.connections.items():
-                if strength >= min_connection_strength and conn_name in agent.beliefs:
-                    G.add_edge(belief_name, conn_name, weight=strength, polarity=polarity)
-        
-        # Netzwerk zeichnen
-        plt.figure(figsize=(12, 10))
-        
-        # Positionen berechnen
-        pos = nx.spring_layout(G, seed=42)
-        
-        # Knoten zeichnen, Farbe basierend auf Kategorie
-        categories = set(nx.get_node_attributes(G, 'category').values())
-        colors = plt.cm.tab10(np.linspace(0, 1, len(categories)))
-        category_colors = dict(zip(categories, colors))
-        
-        for category, color in category_colors.items():
-            node_list = [node for node, data in G.nodes(data=True) if data['category'] == category]
-            
-            if show_activation:
-                # Größe basierend auf Aktivierung
-                node_sizes = [300 + 700 * G.nodes[node]['activation'] for node in node_list]
-                
-                # Farbtransparenz basierend auf Gewissheit
-                alphas = [0.3 + 0.7 * G.nodes[node]['certainty'] for node in node_list]
-                node_colors = [(*color[:3], alpha) for alpha in alphas]
-            else:
-                # Größe basierend auf Stärke
-                node_sizes = [300 + 700 * G.nodes[node]['strength'] for node in node_list]
-                node_colors = [color] * len(node_list)
-            
-            nx.draw_networkx_nodes(
-                G, pos, 
-                nodelist=node_list, 
-                node_color=node_colors,
-                node_size=node_sizes,
-                alpha=0.8,
-                label=category
-            )
-        
-        # Kanten zeichnen, rot für negative, grün für positive
-        pos_edges = [(u, v) for u, v, d in G.edges(data=True) if d['polarity'] > 0]
-        neg_edges = [(u, v) for u, v, d in G.edges(data=True) if d['polarity'] < 0]
-        
-        edge_weights = [G[u][v]['weight'] * 2 for u, v in pos_edges]
-        nx.draw_networkx_edges(G, pos, edgelist=pos_edges, width=edge_weights, 
-                              edge_color='green', alpha=0.6, arrows=True)
-        
-        edge_weights = [G[u][v]['weight'] * 2 for u, v in neg_edges]
-        nx.draw_networkx_edges(G, pos, edgelist=neg_edges, width=edge_weights, 
-                              edge_color='red', alpha=0.6, arrows=True, style='dashed')
-        
-        # Knotenbeschriftungen
-        nx.draw_networkx_labels(G, pos, font_size=10, font_family='sans-serif')
-        
-        title = f"Überzeugungsnetzwerk für Agent {agent_id}"
-        if show_activation:
-            title += " (mit Aktivierungsniveaus)"
-            
-        plt.title(title)
-        plt.legend()
-        plt.axis('off')
-        plt.tight_layout()
-        plt.show()
-    
-    def visualize_cognitive_style_comparison(self):
-        """Visualisiert einen Vergleich der verschiedenen kognitiven Verarbeitungsstile."""
-        # Agenten nach kognitivem Stil gruppieren
-        style_groups = {
-            NeuralProcessingType.SYSTEMATIC: [],
-            NeuralProcessingType.INTUITIVE: [],
-            NeuralProcessingType.ASSOCIATIVE: [],
-            NeuralProcessingType.EMOTIONAL: [],
-            NeuralProcessingType.ANALOGICAL: [],
-            NeuralProcessingType.NARRATIVE: []
-        }
-        
-        # Nur Stile mit Agenten berücksichtigen
-        for agent_id, agent in self.agents.items():
-            style = agent.cognitive_architecture.primary_processing
-            style_groups[style].append(agent_id)
-            
-        active_styles = {s: agents for s, agents in style_groups.items() if agents}
-        
-        if not active_styles:
-            print("Keine Agenten mit definierten kognitiven Stilen gefunden.")
-            return
-            
-        # Häufige Überzeugungen identifizieren (für den Vergleich)
-        all_beliefs = {}
-        for agent in self.agents.values():
-            for belief_name in agent.beliefs:
-                if belief_name not in all_beliefs:
-                    all_beliefs[belief_name] = 0
-                all_beliefs[belief_name] += 1
-        
-        # Top 5 häufigste Überzeugungen auswählen
-        common_beliefs = sorted(all_beliefs.items(), key=lambda x: x[1], reverse=True)[:5]
-        common_belief_names = [b[0] for b in common_beliefs]
-        
-        # Durchschnittliche Überzeugungsstärken pro Stil und Überzeugung
-        style_belief_strengths = {}
-        
-        for style, agent_ids in active_styles.items():
-            style_belief_strengths[style] = {}
-            
-            for belief_name in common_belief_names:
-                strengths = []
-                
-                for agent_id in agent_ids:
-                    agent = self.agents[agent_id]
-                    if belief_name in agent.beliefs:
-                        strengths.append(agent.beliefs[belief_name].strength)
-                
-                if strengths:
-                    style_belief_strengths[style][belief_name] = np.mean(strengths)
-                else:
-                    style_belief_strengths[style][belief_name] = 0
-        
-        # Visualisierung
-        plt.figure(figsize=(12, 8))
-        
-        # Gruppierte Balkendiagramme erstellen
-        x = np.arange(len(common_belief_names))
-        width = 0.15  # Breite der Balken
-        
-        # Für jeden Stil einen Balken pro Überzeugung
-        for i, (style, beliefs) in enumerate(style_belief_strengths.items()):
-            strengths = [beliefs.get(b, 0) for b in common_belief_names]
-            offset = width * (i - len(style_belief_strengths) / 2 + 0.5)
-            plt.bar(x + offset, strengths, width, label=str(style))
-        
-        plt.xlabel('Überzeugungen')
-        plt.ylabel('Durchschnittliche Stärke')
-        plt.title('Überzeugungsstärke nach kognitivem Verarbeitungsstil')
-        plt.xticks(x, common_belief_names, rotation=45, ha='right')
-        plt.legend()
-        plt.grid(axis='y', alpha=0.3)
-        plt.tight_layout()
-        plt.show()
-    
-    def visualize_social_network(self, color_by: str = 'cognitive_style'):
-        """
-        Visualisiert das soziale Netzwerk der Agenten.
-        
-        Args:
-            color_by: Bestimmt, wie die Knoten gefärbt werden 
-                    ('group', 'belief', oder 'cognitive_style')
-        """
-        plt.figure(figsize=(12, 10))
-        
-        # Positionen berechnen
-        pos = nx.spring_layout(self.social_network, seed=42)
-        
-        if color_by == 'group':
-            # Färben nach Gruppenzugehörigkeit (primäre Gruppe für jeden Agenten)
-            colors = []
-            for agent_id in self.social_network.nodes():
-                agent = self.agents[agent_id]
-                
-                # Primäre Gruppe finden (mit höchster Identifikation)
-                primary_group = None
-                max_id = 0.0
-                
-                for group, id_strength in agent.group_identities.items():
-                    if id_strength > max_id:
-                        max_id = id_strength
-                        primary_group = group
-                
-                colors.append(hash(primary_group) % 10 if primary_group else 0)
-            
-            color_map = plt.cm.tab10
-            node_colors = [color_map(c/10) for c in colors]
-            legend_elements = []
-        
-        elif color_by == 'belief':
-            # Bestimme die wichtigste Überzeugung im Netzwerk
-            all_beliefs = set()
-            for agent in self.agents.values():
-                all_beliefs.update(agent.beliefs.keys())
-                
-            # Wähle eine repräsentative Überzeugung
-            if all_beliefs:
-                rep_belief = list(all_beliefs)[0]
-                
-                colors = []
-                for agent_id in self.social_network.nodes():
-                    agent = self.agents[agent_id]
-                    if rep_belief in agent.beliefs:
-                        # Farbe basierend auf Stärke der Überzeugung
-                        colors.append(agent.beliefs[rep_belief].strength)
-                    else:
-                        colors.append(0.0)
-                
-                color_map = plt.cm.viridis
-                node_colors = colors
-                legend_elements = []
-            else:
-                color_map = plt.cm.viridis
-                node_colors = [0.5] * len(self.social_network.nodes())
-                legend_elements = []
-        
-        elif color_by == 'cognitive_style':
-            # Färben nach kognitivem Verarbeitungsstil
-            style_colors = {
-                NeuralProcessingType.SYSTEMATIC: 'blue',
-                NeuralProcessingType.INTUITIVE: 'red',
-                NeuralProcessingType.ASSOCIATIVE: 'green',
-                NeuralProcessingType.EMOTIONAL: 'purple',
-                NeuralProcessingType.ANALOGICAL: 'orange',
-                NeuralProcessingType.NARRATIVE: 'brown'
-            }
-            
-            node_colors = []
-            for agent_id in self.social_network.nodes():
-                agent = self.agents[agent_id]
-                style = agent.cognitive_architecture.primary_processing
-                node_colors.append(style_colors.get(style, 'gray'))
-            
-            # Legendenelemente erstellen
-            from matplotlib.lines import Line2D
-            legend_elements = [
-                Line2D([0], [0], marker='o', color='w', markerfacecolor=color, label=str(style), markersize=10)
-                for style, color in style_colors.items()
-                if any(self.agents[agent_id].cognitive_architecture.primary_processing == style
-                      for agent_id in self.social_network.nodes())
-            ]
-        
-        else:
-            # Standardfarbe
-            color_map = plt.cm.viridis
-            node_colors = [0.5] * len(self.social_network.nodes())
-            legend_elements = []
-            
-        # Knotengröße basierend auf Anzahl der Verbindungen
-        node_size = [300 * (1 + self.social_network.degree(node)) for node in self.social_network.nodes()]
-        
-        # Kanten basierend auf Verbindungsstärke
-        edge_widths = [2 * self.social_network[u][v]['weight'] for u, v in self.social_network.edges()]
-        
-        # Netzwerk zeichnen
-        if color_by in ['group', 'belief']:
-            nodes = nx.draw_networkx_nodes(
-                self.social_network, pos, 
-                node_size=node_size,
-                node_color=node_colors, 
-                cmap=color_map, 
-                alpha=0.8
-            )
-        else:
-            nodes = nx.draw_networkx_nodes(
-                self.social_network, pos, 
-                node_size=node_size,
-                node_color=node_colors, 
-                alpha=0.8
-            )
-        
-        edges = nx.draw_networkx_edges(
-            self.social_network, pos,
-            width=edge_widths,
-            alpha=0.5
-        )
-        
-        # Kleinere Knotenbeschriftungen
-        nx.draw_networkx_labels(
-            self.social_network, pos, 
-            font_size=8, 
-            font_family='sans-serif'
-        )
-        
-        plt.title("Soziales Netzwerk der Agenten")
-        plt.axis('off')
-        
-        if color_by in ['group', 'belief']:
-            plt.colorbar(nodes)
-        elif legend_elements:
-            plt.legend(handles=legend_elements)
-            
-        plt.tight_layout()
-        plt.show()
+    # Removed visualize_neural_processing
+    # Removed visualize_belief_network
+    # Removed visualize_cognitive_style_comparison
+    # Removed visualize_social_network
 
     def save_simulation(self, filename: str):
         """Speichert die Simulation in einer Datei."""
@@ -3572,21 +3196,52 @@ def run_demo():
             break
     
     # Neuronale Verarbeitung visualisieren
-    if systematic_agent:
-        print("\nVisualisierung der neuronalen Verarbeitung eines systematischen Denkers:")
-        society.visualize_neural_processing(systematic_agent)
+    # print("\nVisualisierung der neuronalen Verarbeitung eines systematischen Denkers:")
+    # if systematic_agent:
+    #     visualize_neural_processing(society, systematic_agent) # Updated and commented
     
-    if intuitive_agent:
-        print("\nVisualisierung der neuronalen Verarbeitung eines intuitiven Denkers:")
-        society.visualize_neural_processing(intuitive_agent)
+    # if intuitive_agent:
+    #     print("\nVisualisierung der neuronalen Verarbeitung eines intuitiven Denkers:")
+    #     visualize_neural_processing(society, intuitive_agent) # Updated and commented
     
     # Kognitive Stile vergleichen
-    print("\nVergleich der kognitiven Stile:")
-    society.visualize_cognitive_style_comparison()
+    # print("\nVergleich der kognitiven Stile:")
+    # visualize_cognitive_style_comparison(society) # Updated and commented
     
     # Soziales Netzwerk nach kognitivem Stil
-    print("\nSoziales Netzwerk nach kognitivem Stil:")
-    society.visualize_social_network(color_by='cognitive_style')
+    # print("\nSoziales Netzwerk nach kognitivem Stil:")
+    # visualize_social_network(society, color_by='cognitive_style') # Updated and commented
+
+    print("\n--- Detailed Analysis Output ---")
+    if "polarization_metrics" in analysis and analysis["polarization_metrics"]:
+        print("\nFinal Polarization Metrics:")
+        # Print the last entry, assuming it's the final state
+        final_polarization = analysis["polarization_metrics"][-1]
+        for belief, metrics in final_polarization.items():
+            print(f"  Belief: {belief}, Bimodality: {metrics.get('bimodality', 'N/A'):.2f}, Variance: {metrics.get('variance', 'N/A'):.2f}, Entropy: {metrics.get('entropy', 'N/A'):.2f}")
+
+    if "opinion_clusters" in analysis and analysis["opinion_clusters"]:
+        print("\nOpinion Clusters (Final):")
+        for i, cluster in enumerate(analysis["opinion_clusters"]):
+            print(f"  Cluster {i+1}: Size {cluster.get('size', 'N/A')}, Agents: {cluster.get('agents', [])[:3]}...") # Print first 3 agents
+            # Optionally print some defining beliefs if the structure allows and is not too verbose
+            if "defining_beliefs" in cluster and cluster["defining_beliefs"]:
+                 print(f"    Defining beliefs (sample): {dict(list(cluster['defining_beliefs'].items())[:2])}")
+
+
+    if "robustness_metrics" in analysis:
+        print("\nRobustness Metrics:")
+        print(f"  Error Count: {analysis['robustness_metrics'].get('error_count', 'N/A')}")
+        print(f"  Warning Count: {analysis['robustness_metrics'].get('warning_count', 'N/A')}")
+        print(f"  Simulation Stability: {analysis['robustness_metrics'].get('simulation_stability', 'N/A')}")
+
+    if "decision_patterns" in analysis and "option_counts" in analysis["decision_patterns"]:
+        print("\nDecision Patterns (Option Counts - Sample):")
+        for scenario_id, options in list(analysis["decision_patterns"]["option_counts"].items())[:2]: # Sample 2 scenarios
+            print(f"  Scenario: {scenario_id}")
+            for option, count in options.items():
+                print(f"    Option: {option}, Count: {count}")
+    print("--- End of Detailed Analysis Output ---")
     
     return society, results, analysis
 
