@@ -3089,8 +3089,14 @@ class SimulationVisualizer:
         self.analyzer = analyzer
         self.results = analyzer.results # Zugriff auf Rohdaten falls nötig
 
+    def _ensure_reports_dir(self, base_dir: str = "reports") -> str:
+        """Erstellt das Verzeichnis, falls es nicht existiert."""
+        os.makedirs(base_dir, exist_ok=True)
+        return base_dir
+
     def plot_belief_evolution(self, belief_name: str, agent_ids: Optional[List[str]] = None,
-                              show_mean: bool = True, show_styles: bool = True):
+                              show_mean: bool = True, show_styles: bool = True,
+                              save_to_dir: Optional[str] = None):
         """Plottet die Entwicklung der Stärke eines Beliefs über die Zeit."""
         belief_df = self.analyzer.get_belief_evolution(belief_name)
         if belief_df is None or belief_df.empty:
@@ -3137,10 +3143,19 @@ class SimulationVisualizer:
         plt.ylim(0, 1)
         plt.grid(True, alpha=0.3)
         plt.tight_layout(rect=[0, 0, 0.85, 1]) # Platz für Legende schaffen
+
+        if save_to_dir:
+            reports_dir = self._ensure_reports_dir(save_to_dir)
+            filename = f"{reports_dir}/belief_evolution_{belief_name.replace(' ', '_')}.png"
+            plt.savefig(filename, bbox_inches='tight')
+            logging.info(f"Plot gespeichert: {filename}")
+
         plt.show()
+        plt.close()
 
 
-    def plot_polarization_trend(self, belief_name: Optional[str] = None, metric: str = 'bimodality'):
+    def plot_polarization_trend(self, belief_name: Optional[str] = None, metric: str = 'bimodality',
+                                save_to_dir: Optional[str] = None):
         """Plottet die Entwicklung der Polarisierung (z.B. Bimodalität) über die Zeit."""
         pol_df = self.analyzer.get_polarization_trend(metric=metric)
         if pol_df is None or pol_df.empty:
@@ -3173,10 +3188,18 @@ class SimulationVisualizer:
         plt.ylabel(f"{metric.capitalize()}")
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
+
+        if save_to_dir:
+            reports_dir = self._ensure_reports_dir(save_to_dir)
+            filename = f"{reports_dir}/polarization_{metric}_{belief_name.replace(' ', '_') if belief_name else 'mean'}.png"
+            plt.savefig(filename, bbox_inches='tight')
+            logging.info(f"Plot gespeichert: {filename}")
+
         plt.show()
+        plt.close()
 
 
-    def plot_decision_distribution(self, scenario_id: str):
+    def plot_decision_distribution(self, scenario_id: str, save_to_dir: Optional[str] = None):
         """Zeigt die Verteilung der Entscheidungen für ein Szenario."""
         counts = self.analyzer.get_decision_summary(scenario_id=scenario_id)
         if not counts or scenario_id not in counts:
@@ -3193,9 +3216,17 @@ class SimulationVisualizer:
         plt.ylabel("Anzahl Entscheidungen")
         plt.xticks(rotation=45, ha='right')
         plt.tight_layout()
-        plt.show()
 
-    def plot_cognitive_style_decision_comparison(self, scenario_id: str):
+        if save_to_dir:
+            reports_dir = self._ensure_reports_dir(save_to_dir)
+            filename = f"{reports_dir}/decision_dist_{scenario_id.replace(' ', '_')}.png"
+            plt.savefig(filename, bbox_inches='tight')
+            logging.info(f"Plot gespeichert: {filename}")
+
+        plt.show()
+        plt.close()
+
+    def plot_cognitive_style_decision_comparison(self, scenario_id: str, save_to_dir: Optional[str] = None):
         """Vergleicht Entscheidungsmuster verschiedener kognitiver Stile für ein Szenario."""
         style_counts = self.analyzer.get_cognitive_style_decision_summary()
         if not style_counts:
@@ -3237,10 +3268,18 @@ class SimulationVisualizer:
         plt.xticks(rotation=45, ha='right')
         plt.legend(title='Cognitive Style', bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.tight_layout(rect=[0, 0, 0.85, 1])
+
+        if save_to_dir:
+            reports_dir = self._ensure_reports_dir(save_to_dir)
+            filename = f"{reports_dir}/decision_style_comp_{scenario_id.replace(' ', '_')}.png"
+            plt.savefig(filename, bbox_inches='tight')
+            logging.info(f"Plot gespeichert: {filename}")
+
         plt.show()
+        plt.close()
 
 
-    def plot_ensemble_variance(self, belief_name: str):
+    def plot_ensemble_variance(self, belief_name: str, save_to_dir: Optional[str] = None):
         """Plottet die Varianz der Belief-Stärke über die Ensemble-Läufe."""
         var_df = self.analyzer.get_ensemble_variance("belief_strength_variance")
         if var_df is None or var_df.empty:
@@ -3270,9 +3309,18 @@ class SimulationVisualizer:
         plt.legend()
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.show()
 
-    def visualize_social_network(self, color_by: str = 'cognitive_style', show_clusters: bool = False):
+        if save_to_dir:
+            reports_dir = self._ensure_reports_dir(save_to_dir)
+            filename = f"{reports_dir}/ensemble_variance_{belief_name.replace(' ', '_')}.png"
+            plt.savefig(filename, bbox_inches='tight')
+            logging.info(f"Plot gespeichert: {filename}")
+
+        plt.show()
+        plt.close()
+
+    def visualize_social_network(self, color_by: str = 'cognitive_style', show_clusters: bool = False,
+                                 save_to_dir: Optional[str] = None):
         """Visualisiert das soziale Netzwerk, optional mit Cluster-Markierung."""
         G = self.society.social_network
         if G.number_of_nodes() == 0:
@@ -3354,7 +3402,15 @@ class SimulationVisualizer:
         if legend_elements:
             plt.legend(handles=legend_elements, title=color_by.replace('_', ' ').title(), bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.tight_layout(rect=[0, 0, 0.85, 1])
+
+        if save_to_dir:
+            reports_dir = self._ensure_reports_dir(save_to_dir)
+            filename = f"{reports_dir}/social_network_{color_by}{'_clusters' if show_clusters else ''}.png"
+            plt.savefig(filename, bbox_inches='tight')
+            logging.info(f"Plot gespeichert: {filename}")
+
         plt.show()
+        plt.close()
 
 # --- Beispielhafter Aufruf (ersetzt run_demo) ---
 def run_full_simulation_and_analysis():
@@ -3415,6 +3471,7 @@ def run_full_simulation_and_analysis():
     visualizer.visualize_social_network(color_by='group')
 
     logging.info("Analyse und Visualisierung abgeschlossen.")
+    return society, results, analyzer, visualizer
 
 def create_example_neural_society() -> NeuralEthicalSociety:
     """
@@ -3511,9 +3568,211 @@ def create_example_neural_society() -> NeuralEthicalSociety:
     
     return society
 
+def generate_simulation_report(reports_dir: str = "simulation_reports"):
+    """
+    Runs a full simulation, analyzes its results, saves various visualizations,
+    and generates a comprehensive Markdown summary report.
+
+    This function orchestrates the end-to-end process:
+    1. Calls `run_full_simulation_and_analysis()` to execute the simulation and
+       obtain the society, raw results, analyzer, and visualizer objects.
+       This function itself depends on `create_example_neural_society` for
+       setting up the simulation environment.
+    2. Uses the `SimulationVisualizer` (visualizer object) to generate and save
+       plots (e.g., belief evolution, polarization trends, decision distributions,
+       social network graphs) to the specified `reports_dir`.
+    3. Uses the `SimulationAnalyzer` (analyzer object) to extract key metrics,
+       data summaries, and insights from the simulation results.
+    4. Compiles these insights and references to the saved plots into a Markdown
+       file named `simulation_summary_report.md` within the `reports_dir`.
+
+    Args:
+        reports_dir (str, optional): The directory where the plots and the
+                                     Markdown report will be saved.
+                                     Defaults to "simulation_reports".
+
+    Returns:
+        None. All output (plots and Markdown file) is saved to the filesystem
+        within the specified `reports_dir`.
+
+    Example Usage:
+        >>> generate_simulation_report(reports_dir="my_sim_run_01_report")
+        # This will create 'my_sim_run_01_report' directory (if not existing)
+        # and populate it with .png plot files and simulation_summary_report.md
+    """
+    logging.info(f"Starte Generierung des Simulationsberichts im Verzeichnis: {reports_dir}")
+    os.makedirs(reports_dir, exist_ok=True)
+
+    try:
+        # 1. Simulation und Analyse durchführen
+        logging.info("Führe vollständige Simulation und Analyse durch...")
+        sim_output = run_full_simulation_and_analysis()
+        if sim_output is None:
+            logging.error("run_full_simulation_and_analysis hat keine Ergebnisse zurückgegeben.")
+            return
+        society, results, analyzer, visualizer = sim_output
+        logging.info("Simulation und Analyse abgeschlossen.")
+
+    except Exception as e:
+        logging.error(f"Fehler während run_full_simulation_and_analysis: {e}", exc_info=True)
+        return
+
+    # 2. Plots generieren und speichern
+    logging.info(f"Speichere Plots nach {reports_dir}...")
+    common_beliefs = list(society.belief_templates.keys())
+    common_scenarios = list(society.scenarios.keys())
+
+    # Dateinamen für Plots (relativ zum reports_dir)
+    plot_filenames = {}
+
+    try:
+        if common_beliefs:
+            belief_to_plot = common_beliefs[0]
+            plot_filenames["belief_evolution"] = f"belief_evolution_{belief_to_plot.replace(' ', '_')}.png"
+            visualizer.plot_belief_evolution(belief_to_plot, save_to_dir=reports_dir, show_mean=True, show_styles=True)
+
+            plot_filenames["polarization_trend_variance"] = f"polarization_variance_{belief_to_plot.replace(' ', '_')}.png"
+            visualizer.plot_polarization_trend(belief_name=belief_to_plot, metric='variance', save_to_dir=reports_dir)
+
+            # Durchschnittliche Bimodalität über alle Beliefs
+            # plot_filenames["polarization_trend_bimodality_mean"] = "polarization_bimodality_mean.png"
+            # visualizer.plot_polarization_trend(metric='bimodality', save_to_dir=reports_dir)
+
+
+            plot_filenames["ensemble_variance"] = f"ensemble_variance_{belief_to_plot.replace(' ', '_')}.png"
+            visualizer.plot_ensemble_variance(belief_to_plot, save_to_dir=reports_dir)
+        else:
+            logging.warning("Keine allgemeinen Beliefs zum Plotten der Belief-spezifischen Graphen gefunden.")
+
+        if common_scenarios:
+            scenario_to_plot = common_scenarios[0]
+            plot_filenames["decision_distribution"] = f"decision_dist_{scenario_to_plot.replace(' ', '_')}.png"
+            visualizer.plot_decision_distribution(scenario_to_plot, save_to_dir=reports_dir)
+
+            plot_filenames["cognitive_style_decision_comparison"] = f"decision_style_comp_{scenario_to_plot.replace(' ', '_')}.png"
+            visualizer.plot_cognitive_style_decision_comparison(scenario_to_plot, save_to_dir=reports_dir)
+        else:
+            logging.warning("Keine allgemeinen Szenarien zum Plotten der Szenario-spezifischen Graphen gefunden.")
+
+        plot_filenames["social_network_cognitive_style"] = "social_network_cognitive_style_clusters.png"
+        visualizer.visualize_social_network(color_by='cognitive_style', show_clusters=True, save_to_dir=reports_dir)
+
+        plot_filenames["social_network_group"] = "social_network_group.png"
+        visualizer.visualize_social_network(color_by='group', save_to_dir=reports_dir)
+        logging.info("Alle Plots erfolgreich generiert und gespeichert.")
+    except Exception as e:
+        logging.error(f"Fehler beim Generieren oder Speichern von Plots: {e}", exc_info=True)
+        # Fahre trotzdem mit der Berichterstellung fort, falls möglich
+
+    # 4. Daten für Markdown-Bericht sammeln
+    logging.info("Sammle Daten für den Markdown-Bericht...")
+    report_data = {
+        "num_agents": len(society.agents),
+        "num_steps": analyzer.num_steps,
+        "decision_summary": None,
+        "final_polarization": None,
+        "belief_clusters": None,
+        "ensemble_variance_summary": None
+    }
+
+    if common_scenarios:
+        report_data["decision_summary"] = analyzer.get_decision_summary(scenario_id=common_scenarios[0])
+
+    if common_beliefs and analyzer.final_polarization:
+         report_data["final_polarization"] = analyzer.final_polarization.get(common_beliefs[0], {})
+
+    report_data["belief_clusters"] = analyzer.identify_belief_clusters(step=-1)
+
+    if common_beliefs:
+        ensemble_var_df = analyzer.get_ensemble_variance("belief_strength_variance")
+        if ensemble_var_df is not None and not ensemble_var_df.empty:
+            belief_ensemble_var = ensemble_var_df[ensemble_var_df['belief'] == common_beliefs[0]]
+            if not belief_ensemble_var.empty:
+                report_data["ensemble_variance_summary"] = belief_ensemble_var['variance'].agg(['mean', 'max']).to_dict()
+
+    # 5. Markdown-Bericht erstellen
+    logging.info("Erstelle Markdown-Bericht...")
+    md_content = f"# Simulationsbericht ({pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')})\n\n"
+    md_content += "## 1. Simulationsübersicht\n"
+    md_content += f"- Anzahl der Agenten: {report_data['num_agents']}\n"
+    md_content += f"- Anzahl der Simulationsschritte: {report_data['num_steps']}\n"
+    md_content += f"- Ensemble Größe: {society.robustness_settings.get('ensemble_size', 'N/A')}\n\n"
+
+    md_content += "## 2. Belief-Dynamiken\n"
+    if "belief_evolution" in plot_filenames:
+        md_content += f"### 2.1. Entwicklung von Belief '{common_beliefs[0]}'\n"
+        md_content += f"![Belief Evolution {common_beliefs[0]}]({plot_filenames['belief_evolution']})\n\n"
+    if "polarization_trend_variance" in plot_filenames:
+        md_content += f"### 2.2. Polarisierungstrend für Belief '{common_beliefs[0]}' (Varianz)\n"
+        md_content += f"![Polarization Trend {common_beliefs[0]}]({plot_filenames['polarization_trend_variance']})\n\n"
+    if report_data["final_polarization"]:
+        md_content += f"### 2.3. Finale Polarisierung für '{common_beliefs[0]}':\n"
+        for metric, value in report_data["final_polarization"].items():
+            md_content += f"- {metric.capitalize()}: {value:.3f}\n"
+        md_content += "\n"
+
+    if "ensemble_variance" in plot_filenames and report_data["ensemble_variance_summary"]:
+        md_content += f"### 2.4. Ensemble-Varianz für Belief '{common_beliefs[0]}'\n"
+        md_content += f"![Ensemble Variance {common_beliefs[0]}]({plot_filenames['ensemble_variance']})\n"
+        md_content += f"- Durchschnittliche Varianz über Schritte: {report_data['ensemble_variance_summary']['mean']:.4f}\n"
+        md_content += f"- Maximale Varianz über Schritte: {report_data['ensemble_variance_summary']['max']:.4f}\n\n"
+
+
+    md_content += "## 3. Entscheidungsanalyse\n"
+    if common_scenarios and "decision_distribution" in plot_filenames:
+        md_content += f"### 3.1. Entscheidungsverteilung für Szenario '{common_scenarios[0]}'\n"
+        md_content += f"![Decision Distribution {common_scenarios[0]}]({plot_filenames['decision_distribution']})\n"
+        if report_data["decision_summary"] and common_scenarios[0] in report_data["decision_summary"]:
+            md_content += "Verteilungsdaten:\n"
+            for option, count in report_data["decision_summary"][common_scenarios[0]].items():
+                md_content += f"- Option '{option}': {count} Mal gewählt\n"
+            md_content += "\n"
+
+    if common_scenarios and "cognitive_style_decision_comparison" in plot_filenames:
+        md_content += f"### 3.2. Entscheidungsvergleich nach Kognitivem Stil (Szenario: '{common_scenarios[0]}')\n"
+        md_content += f"![Cognitive Style Decision Comparison {common_scenarios[0]}]({plot_filenames['cognitive_style_decision_comparison']})\n\n"
+
+    md_content += "## 4. Soziales Netzwerk und Cluster\n"
+    if "social_network_cognitive_style" in plot_filenames:
+        md_content += "### 4.1. Soziales Netzwerk (gefärbt nach Kognitivem Stil, mit Clustern)\n"
+        md_content += f"![Social Network Cognitive Style]({plot_filenames['social_network_cognitive_style']})\n\n"
+    if "social_network_group" in plot_filenames:
+        md_content += "### 4.2. Soziales Netzwerk (gefärbt nach Gruppe)\n"
+        md_content += f"![Social Network Group]({plot_filenames['social_network_group']})\n\n"
+
+    if report_data["belief_clusters"]:
+        md_content += "### 4.3. Gefundene Belief-Cluster (im letzten Schritt):\n"
+        md_content += f"- Anzahl der Cluster (min. {ANALYSIS_CLUSTER_MIN_SIZE} Agenten): {len(report_data['belief_clusters'])}\n"
+        if report_data["belief_clusters"]:
+            largest_cluster = max(report_data["belief_clusters"], key=lambda c: c['size'], default=None)
+            if largest_cluster:
+                md_content += f"- Größe des größten Clusters: {largest_cluster['size']} Agenten\n"
+                md_content += f"- Durchschnittliche Ähnlichkeit im größten Cluster: {largest_cluster['average_similarity']:.3f}\n"
+                if largest_cluster['defining_beliefs']:
+                    md_content += "- Definierende Beliefs des größten Clusters (Stärke):\n"
+                    for belief, strength in list(largest_cluster['defining_beliefs'].items())[:3]: # Top 3
+                        md_content += f"  - {belief}: {strength:.2f}\n"
+        md_content += "\n"
+    else:
+        md_content += "- Keine Belief-Cluster gefunden.\n\n"
+
+
+    # 6. Markdown-Bericht speichern
+    report_filepath = os.path.join(reports_dir, "simulation_summary_report.md")
+    try:
+        with open(report_filepath, "w", encoding="utf-8") as f:
+            f.write(md_content)
+        logging.info(f"Markdown-Bericht erfolgreich gespeichert: {report_filepath}")
+    except Exception as e:
+        logging.error(f"Fehler beim Speichern des Markdown-Berichts: {e}", exc_info=True)
+
+    logging.info("Simulationsbericht vollständig generiert.")
+
+
 # Main-Block wird ganz zum Schluss platziert
 if __name__ == "__main__":
     # Stelle sicher, dass die benötigten Klassen definiert sind
     # (Normalerweise durch Importe am Anfang des Skripts)
     # Führe die Demo aus
-    run_full_simulation_and_analysis()
+    # run_full_simulation_and_analysis() # Alter Aufruf
+    generate_simulation_report(reports_dir="my_simulation_run_report")
