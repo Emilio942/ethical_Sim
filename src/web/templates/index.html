@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethische Agenten-Simulation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        .metric-card {
+            transition: transform 0.2s;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+        .status-running {
+            color: #28a745;
+        }
+        .status-stopped {
+            color: #dc3545;
+        }
+        .progress-container {
+            margin: 20px 0;
+        }
+        .agent-card {
+            border-left: 4px solid #007bff;
+        }
+        .export-buttons {
+            margin: 20px 0;
+        }
+        .simulation-controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <nav class="navbar navbar-dark bg-dark mb-4">
+            <div class="container-fluid">
+                <span class="navbar-brand mb-0 h1">
+                    <i class="fas fa-brain"></i> Ethische Agenten-Simulation
+                </span>
+                <span class="navbar-text">
+                    <i class="fas fa-circle status-indicator" id="statusIndicator"></i>
+                    <span id="statusText">Bereit</span>
+                </span>
+            </div>
+        </nav>
+
+        <div class="row">
+            <!-- Linke Spalte: Steuerung -->
+            <div class="col-md-4">
+                <div class="simulation-controls">
+                    <h4><i class="fas fa-cogs"></i> Simulation Konfiguration</h4>
+                    
+                    <!-- Agenten-Konfiguration -->
+                    <div class="mb-3">
+                        <label class="form-label">Anzahl Agenten:</label>
+                        <input type="number" class="form-control" id="numAgents" value="6" min="2" max="20">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Anzahl Szenarien:</label>
+                        <input type="number" class="form-control" id="numScenarios" value="10" min="5" max="50">
+                    </div>
+
+                    <!-- Agenten-Typen -->
+                    <div class="mb-3">
+                        <label class="form-label">Agenten-Persönlichkeiten:</label>
+                        <div id="agentPersonalities">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="utilitarian" id="util" checked>
+                                <label class="form-check-label" for="util">Utilitaristic</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="deontological" id="deont" checked>
+                                <label class="form-check-label" for="deont">Deontological</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="virtue_ethics" id="virtue" checked>
+                                <label class="form-check-label" for="virtue">Virtue Ethics</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="balanced" id="balanced" checked>
+                                <label class="form-check-label" for="balanced">Balanced</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Steuerungsbuttons -->
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success" id="startBtn" onclick="startSimulation()">
+                            <i class="fas fa-play"></i> Simulation Starten
+                        </button>
+                        <button class="btn btn-danger" id="stopBtn" onclick="stopSimulation()" disabled>
+                            <i class="fas fa-stop"></i> Simulation Stoppen
+                        </button>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress-container" id="progressContainer" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar" id="progressBar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted" id="progressText">Scenario 0 von 0</small>
+                    </div>
+                </div>
+
+                <!-- Export Buttons -->
+                <div class="export-buttons" id="exportButtons" style="display: none;">
+                    <h5><i class="fas fa-download"></i> Daten Export</h5>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="exportData('json')">
+                            <i class="fas fa-file-code"></i> JSON Export
+                        </button>
+                        <button class="btn btn-outline-success" onclick="exportData('csv')">
+                            <i class="fas fa-table"></i> CSV Export
+                        </button>
+                        <button class="btn btn-outline-info" onclick="exportData('html')">
+                            <i class="fas fa-file-alt"></i> HTML Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rechte Spalte: Ergebnisse -->
+            <div class="col-md-8">
+                <div id="resultsContainer" style="display: none;">
+                    <!-- Metriken Dashboard -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h4><i class="fas fa-chart-bar"></i> Metriken Dashboard</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card metric-card">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Polarisierung</h5>
+                                    <h3 class="text-warning" id="polarizationMetric">-</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card metric-card">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Konsens</h5>
+                                    <h3 class="text-success" id="consensusMetric">-</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card metric-card">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Netzwerk-Kohäsion</h5>
+                                    <h3 class="text-info" id="cohesionMetric">-</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card metric-card">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Validierung</h5>
+                                    <h3 class="text-primary" id="validationMetric">-</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Agenten Übersicht -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h4><i class="fas fa-users"></i> Agenten Übersicht</h4>
+                            <div id="agentsContainer"></div>
+                        </div>
+                    </div>
+
+                    <!-- Visualisierungen -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h4><i class="fas fa-chart-line"></i> Visualisierungen</h4>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">Entscheidungsnetzwerk</div>
+                                <div class="card-body">
+                                    <div id="networkChart" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">Überzeugungsentwicklung</div>
+                                <div class="card-body">
+                                    <div id="beliefChart" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Placeholder für leere Ergebnisse -->
+                <div id="emptyState" class="text-center py-5">
+                    <i class="fas fa-flask fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">Keine Simulation aktiv</h4>
+                    <p class="text-muted">Starten Sie eine Simulation, um Ergebnisse zu sehen.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+    <script>
+        let simulationInterval;
+        let isRunning = false;
+
+        const socket = io();
+        socket.on('simulation_started', data => {
+            document.getElementById('statusIndicator').classList.replace('status-stopped', 'status-running');
+            document.getElementById('statusText').textContent = 'Läuft';
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+        });
+        socket.on('progress', data => {
+            const percent = data.percentage;
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').textContent = `Scenario ${data.current} von ${data.total}`;
+        });
+        socket.on('simulation_finished', () => {
+            document.getElementById('statusIndicator').classList.replace('status-running', 'status-stopped');
+            document.getElementById('statusText').textContent = 'Gestoppt';
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('exportButtons').style.display = 'block';
+        });
+
+        function startSimulation() {
+            const config = {
+                num_scenarios: parseInt(document.getElementById('numScenarios').value),
+                agents: generateAgentConfig()
+            };
+
+            fetch('/api/start_simulation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(config)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'started') {
+                    isRunning = true;
+                    updateUIForRunning();
+                    startStatusPolling();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Fehler beim Starten der Simulation');
+            });
+        }
+
+        function stopSimulation() {
+            fetch('/api/stop_simulation', { method: 'POST' })
+            .then(() => {
+                isRunning = false;
+                updateUIForStopped();
+                stopStatusPolling();
+            });
+        }
+
+        function generateAgentConfig() {
+            const numAgents = parseInt(document.getElementById('numAgents').value);
+            const personalities = [];
+            
+            document.querySelectorAll('#agentPersonalities input:checked').forEach(input => {
+                personalities.push(input.value);
+            });
+
+            const agents = [];
+            for (let i = 0; i < numAgents; i++) {
+                agents.push({
+                    personality: personalities[i % personalities.length],
+                    framework: personalities[i % personalities.length]
+                });
+            }
+            return agents;
+        }
+
+        function updateUIForRunning() {
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('statusIndicator').className = 'fas fa-circle status-running';
+            document.getElementById('statusText').textContent = 'Läuft';
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('emptyState').style.display = 'none';
+        }
+
+        function updateUIForStopped() {
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('statusIndicator').className = 'fas fa-circle status-stopped';
+            document.getElementById('statusText').textContent = 'Gestoppt';
+            document.getElementById('progressContainer').style.display = 'none';
+        }
+
+        function startStatusPolling() {
+            simulationInterval = setInterval(updateStatus, 1000);
+        }
+
+        function stopStatusPolling() {
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+            }
+        }
+
+        function updateStatus() {
+            fetch('/api/simulation_status')
+            .then(response => response.json())
+            .then(data => {
+                const progressBar = document.getElementById('progressBar');
+                const progressText = document.getElementById('progressText');
+                
+                progressBar.style.width = data.progress + '%';
+                progressText.textContent = `Scenario ${data.current_scenario} von ${data.total_scenarios}`;
+                
+                if (!data.running && data.progress === 100) {
+                    isRunning = false;
+                    updateUIForStopped();
+                    stopStatusPolling();
+                    loadResults();
+                    document.getElementById('statusText').textContent = 'Abgeschlossen';
+                }
+            });
+        }
+
+        function loadResults() {
+            // Metriken laden
+            fetch('/api/metrics')
+            .then(response => response.json())
+            .then(data => {
+                updateMetrics(data);
+            });
+
+            // Agenten laden
+            fetch('/api/agents')
+            .then(response => response.json())
+            .then(data => {
+                updateAgents(data);
+            });
+
+            document.getElementById('resultsContainer').style.display = 'block';
+            document.getElementById('exportButtons').style.display = 'block';
+        }
+
+        function updateMetrics(metrics) {
+            document.getElementById('polarizationMetric').textContent = 
+                (metrics.polarization || 0).toFixed(3);
+            document.getElementById('consensusMetric').textContent = 
+                (metrics.consensus || 0).toFixed(3);
+            document.getElementById('cohesionMetric').textContent = 
+                (metrics.network_cohesion || 0).toFixed(3);
+            document.getElementById('validationMetric').textContent = 
+                (metrics.validation_score || 0).toFixed(3);
+        }
+
+        function updateAgents(agents) {
+            const container = document.getElementById('agentsContainer');
+            container.innerHTML = '';
+
+            agents.forEach(agent => {
+                const agentCard = document.createElement('div');
+                agentCard.className = 'card agent-card mb-2';
+                agentCard.innerHTML = `
+                    <div class="card-body">
+                        <h6 class="card-title">${agent.id}</h6>
+                        <small class="text-muted">
+                            ${agent.personality} | ${agent.framework} | 
+                            ${agent.decision_count} Entscheidungen
+                        </small>
+                    </div>
+                `;
+                container.appendChild(agentCard);
+            });
+        }
+
+        function exportData(format) {
+            window.open(`/api/export/${format}`, '_blank');
+        }
+
+        // Initial UI setup
+        document.addEventListener('DOMContentLoaded', function() {
+            updateUIForStopped();
+        });
+    </script>
+</body>
+</html>
