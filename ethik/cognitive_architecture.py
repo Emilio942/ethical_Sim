@@ -2,7 +2,7 @@ import numpy as np
 from typing import Dict
 
 # Import from project modules
-from neural_types import NeuralProcessingType
+from .neural_types import NeuralProcessingType
 
 class CognitiveArchitecture:
     """Modelliert die kognitive Architektur eines Agenten."""

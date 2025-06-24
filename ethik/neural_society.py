@@ -8,8 +8,11 @@ from scipy.stats import entropy
 from typing import List, Dict, Tuple, Optional, Set, Union, Callable
 
 # Import aus anderen Modulen
-from neural_core import NeuralProcessingType, CognitiveArchitecture, NeuralEthicalBelief, EthicalScenario
-from neural_agent import NeuralEthicalAgent
+from .neural_types import NeuralProcessingType
+from .cognitive_architecture import CognitiveArchitecture
+from .beliefs import NeuralEthicalBelief
+from .scenarios import EthicalScenario
+from .agents import NeuralEthicalAgent # Updated to import from .agents
 
 class NeuralEthicalSociety:
     """Repräsentiert eine Gesellschaft von ethischen Agenten mit neuronalen Verarbeitungsmodellen."""

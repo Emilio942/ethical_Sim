@@ -3,10 +3,10 @@ import random
 from typing import List, Dict, Tuple, Optional, Union, Callable
 
 # Import from project modules
-from neural_types import NeuralProcessingType
-from cognitive_architecture import CognitiveArchitecture
-from beliefs import NeuralEthicalBelief
-from scenarios import EthicalScenario
+from .neural_types import NeuralProcessingType
+from .cognitive_architecture import CognitiveArchitecture
+from .beliefs import NeuralEthicalBelief
+from .scenarios import EthicalScenario # Corrected to relative import
 
 class NeuralEthicalAgent:
     """Repräsentiert einen ethischen Agenten mit neuronalen Verarbeitungsmodellen."""
