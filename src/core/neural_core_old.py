@@ -6,29 +6,46 @@ Dieses Modul konsolidiert alle Importe und stellt eine einheitliche
 Schnittstelle für die ethische Agenten-Simulation bereit.
 """
 
-# Importiere nur die Kern-Komponenten (ohne scenarios um Zirkularabhängigkeiten zu vermeiden)
-try:
-    # Try relative imports first (when used as a package)
-    from .neural_types import NeuralProcessingType
-    from .cognitive_architecture import CognitiveArchitecture  
-    from .beliefs import NeuralEthicalBelief
-except ImportError:
-    try:
-        # Try absolute imports from the src package
-        from core.neural_types import NeuralProcessingType
-        from core.cognitive_architecture import CognitiveArchitecture  
-        from core.beliefs import NeuralEthicalBelief
-    except ImportError:
-        # Fallback to direct imports
-        from neural_types import NeuralProcessingType
-        from cognitive_architecture import CognitiveArchitecture  
-        from beliefs import NeuralEthicalBelief
+# Importiere alle notwendigen Komponenten aus den separaten Modulen
+from neural_types import NeuralProcessingType
+from cognitive_architecture import CognitiveArchitecture  
+from beliefs import NeuralEthicalBelief
+from scenarios import EthicalScenario, ScenarioGenerator
 
 # Re-exportiere für einfache Verwendung
 __all__ = [
     'NeuralProcessingType',
     'CognitiveArchitecture', 
-    'NeuralEthicalBelief'
+    'NeuralEthicalBelief',
+    'EthicalScenario',
+    'ScenarioGenerator'
+]
+
+# Versionsinfo
+__version__ = "1.0.0"
+__author__ = "Ethische Agenten Projekt"
+
+"""
+Kernmodul für neuronale ethische Agenten
+========================================
+
+Dieses Modul konsolidiert alle Importe und stellt eine einheitliche
+Schnittstelle für die ethische Agenten-Simulation bereit.
+"""
+
+# Importiere alle notwendigen Komponenten aus den separaten Modulen
+from neural_types import NeuralProcessingType
+from cognitive_architecture import CognitiveArchitecture  
+from beliefs import NeuralEthicalBelief
+from scenarios import EthicalScenario, ScenarioGenerator
+
+# Re-exportiere für einfache Verwendung
+__all__ = [
+    'NeuralProcessingType',
+    'CognitiveArchitecture', 
+    'NeuralEthicalBelief',
+    'EthicalScenario',
+    'ScenarioGenerator'
 ]
 
 # Versionsinfo
@@ -64,7 +81,12 @@ if __name__ == "__main__":
         belief = NeuralEthicalBelief("Test", "Kategorie")
         print(f"✅ NeuralEthicalBelief funktioniert: {belief.name}")
         
-        print("🎉 Kern-Komponenten erfolgreich geladen!")
+        # Teste Szenarien
+        generator = ScenarioGenerator()
+        print(f"✅ ScenarioGenerator funktioniert: {len(generator.get_available_templates())} Templates")
+        
+        print("🎉 Alle Komponenten erfolgreich geladen!")
         
     except Exception as e:
+        print(f"❌ Fehler beim Testen der Komponenten: {e}")
         print(f"❌ Fehler beim Testen der Komponenten: {e}")

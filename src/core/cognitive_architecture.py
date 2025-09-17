@@ -1,8 +1,17 @@
 import numpy as np
 from typing import Dict
 
-# Import from project modules
-from neural_types import NeuralProcessingType
+# Import from project modules - try different approaches for compatibility
+try:
+    # Try relative imports first (when used as a package)
+    from .neural_types import NeuralProcessingType
+except ImportError:
+    try:
+        # Try absolute imports from the src package
+        from core.neural_types import NeuralProcessingType
+    except ImportError:
+        # Fallback to direct imports
+        from neural_types import NeuralProcessingType
 
 class CognitiveArchitecture:
     """Modelliert die kognitive Architektur eines Agenten."""

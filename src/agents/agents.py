@@ -2,11 +2,26 @@ import numpy as np
 import random
 from typing import List, Dict, Tuple, Optional, Union, Callable
 
-# Import from project modules
-from neural_types import NeuralProcessingType
-from cognitive_architecture import CognitiveArchitecture
-from beliefs import NeuralEthicalBelief
-from scenarios import EthicalScenario
+# Import from project modules - try different approaches for compatibility
+try:
+    # Try relative imports first (when used as a package)
+    from ..core.neural_types import NeuralProcessingType
+    from ..core.cognitive_architecture import CognitiveArchitecture
+    from ..core.beliefs import NeuralEthicalBelief
+    from ..scenarios.scenarios import EthicalScenario
+except ImportError:
+    try:
+        # Try absolute imports from the src package
+        from core.neural_types import NeuralProcessingType
+        from core.cognitive_architecture import CognitiveArchitecture
+        from core.beliefs import NeuralEthicalBelief
+        from scenarios.scenarios import EthicalScenario
+    except ImportError:
+        # Fallback to direct imports
+        from neural_types import NeuralProcessingType
+        from cognitive_architecture import CognitiveArchitecture
+        from beliefs import NeuralEthicalBelief
+        from scenarios import EthicalScenario
 
 class NeuralEthicalAgent:
     """Repräsentiert einen ethischen Agenten mit neuronalen Verarbeitungsmodellen."""

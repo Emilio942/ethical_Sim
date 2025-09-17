@@ -7,12 +7,29 @@ import os
 from scipy.stats import entropy
 from typing import List, Dict, Tuple, Optional, Set, Union, Callable
 
-# Import aus anderen Modulen
-from neural_types import NeuralProcessingType
-from cognitive_architecture import CognitiveArchitecture
-from beliefs import NeuralEthicalBelief
-from scenarios import EthicalScenario
-from neural_agent import NeuralEthicalAgent
+# Import aus anderen Modulen - try different approaches for compatibility
+try:
+    # Try relative imports first (when used as a package)
+    from ..core.neural_types import NeuralProcessingType
+    from ..core.cognitive_architecture import CognitiveArchitecture
+    from ..core.beliefs import NeuralEthicalBelief
+    from ..scenarios.scenarios import EthicalScenario
+    from ..agents.neural_agent import NeuralEthicalAgent
+except ImportError:
+    try:
+        # Try absolute imports from the src package
+        from core.neural_types import NeuralProcessingType
+        from core.cognitive_architecture import CognitiveArchitecture
+        from core.beliefs import NeuralEthicalBelief
+        from scenarios.scenarios import EthicalScenario
+        from agents.neural_agent import NeuralEthicalAgent
+    except ImportError:
+        # Fallback to direct imports
+        from neural_types import NeuralProcessingType
+        from cognitive_architecture import CognitiveArchitecture
+        from beliefs import NeuralEthicalBelief
+        from scenarios import EthicalScenario
+        from neural_agent import NeuralEthicalAgent
 
 class NeuralEthicalSociety:
     """Repräsentiert eine Gesellschaft von ethischen Agenten mit neuronalen Verarbeitungsmodellen."""

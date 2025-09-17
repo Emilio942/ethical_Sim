@@ -6,7 +6,11 @@ Einfacher Performance-Test für Ethische Agenten-Simulation
 
 import time
 import sys
+import os
 from datetime import datetime
+
+# Füge src-Verzeichnis zum Python-Pfad hinzu
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Import-Test für alle Module
 def test_imports():
@@ -14,49 +18,49 @@ def test_imports():
     print("🔄 Teste Module-Imports...")
     
     try:
-        from neural_society import NeuralEthicalSociety
+        from society.neural_society import NeuralEthicalSociety
         print("✅ NeuralEthicalSociety importiert")
     except Exception as e:
         print(f"❌ NeuralEthicalSociety: {e}")
         return False
         
     try:
-        from agents import NeuralEthicalAgent
+        from agents.agents import NeuralEthicalAgent
         print("✅ NeuralEthicalAgent importiert")
     except Exception as e:
         print(f"❌ NeuralEthicalAgent: {e}")
         return False
         
     try:
-        from scenarios import ScenarioGenerator
+        from scenarios.scenarios import ScenarioGenerator
         print("✅ ScenarioGenerator importiert")
     except Exception as e:
         print(f"❌ ScenarioGenerator: {e}")
         return False
         
     try:
-        from metrics import MetricsCollector
+        from analysis.metrics import MetricsCollector
         print("✅ MetricsCollector importiert")
     except Exception as e:
         print(f"❌ MetricsCollector: {e}")
         return False
         
     try:
-        from validation import ValidationSuite
+        from analysis.validation import ValidationSuite
         print("✅ ValidationSuite importiert")
     except Exception as e:
         print(f"❌ ValidationSuite: {e}")
         return False
         
     try:
-        from export_reporting import DataExporter
+        from analysis.export_reporting import DataExporter
         print("✅ DataExporter importiert")
     except Exception as e:
         print(f"❌ DataExporter: {e}")
         return False
         
     try:
-        from visualization import EthicalSimulationVisualizer
+        from visualization.visualization import EthicalSimulationVisualizer
         print("✅ EthicalSimulationVisualizer importiert")
     except Exception as e:
         print(f"❌ EthicalSimulationVisualizer: {e}")
@@ -70,9 +74,9 @@ def test_basic_functionality():
     
     try:
         # Import Module
-        from neural_society import NeuralEthicalSociety
-        from agents import NeuralEthicalAgent
-        from scenarios import ScenarioGenerator
+        from society.neural_society import NeuralEthicalSociety
+        from agents.agents import NeuralEthicalAgent
+        from scenarios.scenarios import ScenarioGenerator
         
         # Erstelle Society
         start_time = time.time()
@@ -103,11 +107,11 @@ def test_advanced_features():
     print("\n🔄 Teste erweiterte Features...")
     
     try:
-        from metrics import MetricsCollector
-        from validation import ValidationSuite
-        from export_reporting import DataExporter
-        from neural_society import NeuralEthicalSociety
-        from agents import NeuralEthicalAgent
+        from analysis.metrics import MetricsCollector
+        from analysis.validation import ValidationSuite
+        from analysis.export_reporting import DataExporter
+        from society.neural_society import NeuralEthicalSociety
+        from agents.agents import NeuralEthicalAgent
         
         # Erstelle Test-Society
         society = NeuralEthicalSociety()

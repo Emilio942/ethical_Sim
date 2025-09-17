@@ -16,7 +16,7 @@ Features:
 
 from flask import Flask, render_template, request, jsonify, send_file
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required
-from plotly_web_visualizations import PlotlyWebVisualizations
+from ..visualization.plotly_web_visualizations import PlotlyWebVisualizations
 from flask_socketio import SocketIO, emit
 import json
 import os
@@ -26,13 +26,13 @@ from datetime import datetime
 import tempfile
 
 # Import der Simulation-Module
-from neural_society import NeuralEthicalSociety
-from agents import NeuralEthicalAgent
-from scenarios import ScenarioGenerator
-from metrics import MetricsCollector
-from validation import ValidationSuite
-from export_reporting import DataExporter, AutomatedReporter
-from visualization import EthicalSimulationVisualizer
+from ..society.neural_society import NeuralEthicalSociety
+from ..agents.agents import NeuralEthicalAgent
+from ..scenarios.scenarios import ScenarioGenerator
+from ..analysis.metrics import MetricsCollector
+from ..analysis.validation import ValidationSuite
+from ..analysis.export_reporting import DataExporter, AutomatedReporter
+from ..visualization.visualization import EthicalSimulationVisualizer
 
 app = Flask(__name__)
 app.secret_key = 'ethical_agents_simulation_2025'
@@ -258,7 +258,7 @@ def dashboard():
         simulation_state['society'] = demo_society
     
     try:
-        from simple_interactive_dashboard import create_simple_interactive_dashboard
+        from ..visualization.simple_interactive_dashboard import create_simple_interactive_dashboard
         dashboard_html = create_simple_interactive_dashboard(simulation_state['society'])
         return dashboard_html
     except Exception as e:
