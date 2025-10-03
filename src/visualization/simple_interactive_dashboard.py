@@ -3,7 +3,7 @@
 Einfache interaktive Visualisierungen mit Plotly
 ==============================================
 
-Diese Version erstellt einfache, aber funktionsfähige 
+Diese Version erstellt einfache, aber funktionsfähige
 interaktive Visualisierungen für das Web-Interface.
 """
 
@@ -11,41 +11,41 @@ import json
 from datetime import datetime
 import random
 
+
 class SimpleInteractiveVisualizations:
     """Einfache interaktive Visualisierungen ohne externe Dependencies"""
-    
+
     def __init__(self, society):
         self.society = society
-        
+
     def create_network_visualization(self):
         """Erstellt eine einfache Netzwerk-Visualisierung mit HTML/CSS/JS"""
         # self.society.agents ist ein Dict, nicht eine Liste
         agents_dict = self.society.agents if self.society.agents else {}
         agents = list(agents_dict.values())
-        
+
         # Generiere JSON-Daten für das Netzwerk
         nodes = []
         links = []
-        
+
         for i, agent in enumerate(agents):
-            nodes.append({
-                'id': agent.agent_id,
-                'name': agent.agent_id,
-                'personality': getattr(agent, 'personality', 'unknown'),
-                'x': random.uniform(100, 700),
-                'y': random.uniform(100, 400),
-                'color': self._get_personality_color(getattr(agent, 'personality', 'unknown'))
-            })
-        
+            nodes.append(
+                {
+                    "id": agent.agent_id,
+                    "name": agent.agent_id,
+                    "personality": getattr(agent, "personality", "unknown"),
+                    "x": random.uniform(100, 700),
+                    "y": random.uniform(100, 400),
+                    "color": self._get_personality_color(getattr(agent, "personality", "unknown")),
+                }
+            )
+
         # Einfache Links zwischen Agenten
         for i in range(len(nodes)):
-            for j in range(i+1, min(i+3, len(nodes))):  # Verbinde mit 1-2 Nachbarn
+            for j in range(i + 1, min(i + 3, len(nodes))):  # Verbinde mit 1-2 Nachbarn
                 if random.random() > 0.5:
-                    links.append({
-                        'source': nodes[i]['id'],
-                        'target': nodes[j]['id']
-                    })
-        
+                    links.append({"source": nodes[i]["id"], "target": nodes[j]["id"]})
+
         network_html = f"""
         <div id="network-container" style="width: 100%; height: 400px; border: 1px solid #ccc; position: relative; background: #f9f9f9;">
             <svg id="network-svg" width="100%" height="100%">
@@ -100,41 +100,41 @@ class SimpleInteractiveVisualizations:
         }});
         </script>
         """
-        
+
         return network_html
-    
+
     def _get_personality_color(self, personality):
         """Gibt Farbe für Persönlichkeitstyp zurück"""
         color_map = {
-            'utilitarian': '#FF6B6B',
-            'deontological': '#4ECDC4', 
-            'virtue_ethics': '#45B7D1',
-            'balanced': '#96CEB4',
-            'pragmatic': '#FFEAA7',
-            'idealistic': '#DDA0DD',
-            'unknown': '#95A5A6'
+            "utilitarian": "#FF6B6B",
+            "deontological": "#4ECDC4",
+            "virtue_ethics": "#45B7D1",
+            "balanced": "#96CEB4",
+            "pragmatic": "#FFEAA7",
+            "idealistic": "#DDA0DD",
+            "unknown": "#95A5A6",
         }
-        return color_map.get(personality, '#95A5A6')
-    
+        return color_map.get(personality, "#95A5A6")
+
     def _generate_svg_links(self, links, nodes):
         """Generiert SVG für Links"""
         svg_links = ""
-        node_positions = {node['id']: (node['x'], node['y']) for node in nodes}
-        
+        node_positions = {node["id"]: (node["x"], node["y"]) for node in nodes}
+
         for link in links:
-            if link['source'] in node_positions and link['target'] in node_positions:
-                x1, y1 = node_positions[link['source']]
-                x2, y2 = node_positions[link['target']]
+            if link["source"] in node_positions and link["target"] in node_positions:
+                x1, y1 = node_positions[link["source"]]
+                x2, y2 = node_positions[link["target"]]
                 svg_links += f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="#999" stroke-width="1" opacity="0.6"/>\n'
-        
+
         return svg_links
-    
+
     def _generate_svg_nodes(self, nodes):
         """Generiert SVG für Nodes"""
         svg_nodes = ""
-        
+
         for node in nodes:
-            svg_nodes += f'''
+            svg_nodes += f"""
             <circle class="network-node" 
                     cx="{node['x']}" cy="{node['y']}" r="15" 
                     fill="{node['color']}" stroke="#666" stroke-width="2"
@@ -144,26 +144,27 @@ class SimpleInteractiveVisualizations:
                   font-family="Arial" font-size="10" fill="white" pointer-events="none">
                 {node['id'][:3]}
             </text>
-            '''
-        
+            """
+
         return svg_nodes
-    
+
     def create_metrics_chart(self):
         """Erstellt einfaches Metriken-Chart"""
         try:
             from metrics import MetricsCollector
+
             collector = MetricsCollector()
             metrics = collector.collect_all_metrics(self.society)
-            societal = metrics.get('societal_metrics', {})
+            societal = metrics.get("societal_metrics", {})
         except:
             # Fallback zu Demo-Daten
             societal = {
-                'polarization': random.uniform(0.1, 0.4),
-                'consensus': random.uniform(0.3, 0.8),
-                'network_cohesion': random.uniform(0.2, 0.7),
-                'influence_degree_gini': random.uniform(0.1, 0.5)
+                "polarization": random.uniform(0.1, 0.4),
+                "consensus": random.uniform(0.3, 0.8),
+                "network_cohesion": random.uniform(0.2, 0.7),
+                "influence_degree_gini": random.uniform(0.1, 0.5),
             }
-        
+
         chart_html = f"""
         <div id="metrics-chart" style="display: flex; gap: 20px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
             {self._create_metric_gauge('Polarization', societal.get('polarization', 0), '#FF6B6B')}
@@ -172,24 +173,25 @@ class SimpleInteractiveVisualizations:
             {self._create_metric_gauge('Influence', societal.get('influence_degree_gini', 0), '#96CEB4')}
         </div>
         """
-        
+
         return chart_html
-    
+
     def _create_metric_gauge(self, name, value, color):
         """Erstellt einfachen Gauge-Chart"""
         if isinstance(value, str) or value is None:
             value = 0
-        
+
         # Behandle NaN-Werte
         try:
             import math
+
             if math.isnan(value):
                 value = 0
         except:
             value = float(value) if value else 0
-        
+
         percentage = min(max(value * 100, 0), 100)
-        
+
         return f"""
         <div class="metric-gauge" style="text-align: center; flex: 1;">
             <h4 style="margin: 0 0 10px 0; color: #333;">{name}</h4>
@@ -208,7 +210,7 @@ class SimpleInteractiveVisualizations:
             </div>
         </div>
         """
-    
+
     def create_simple_dashboard(self):
         """Erstellt vollständiges einfaches Dashboard"""
         dashboard_html = f"""
@@ -339,45 +341,55 @@ class SimpleInteractiveVisualizations:
         </body>
         </html>
         """
-        
+
         return dashboard_html
+
 
 def create_simple_interactive_dashboard(society):
     """Hauptfunktion zur Erstellung des einfachen interaktiven Dashboards"""
     viz = SimpleInteractiveVisualizations(society)
     return viz.create_simple_dashboard()
 
+
 if __name__ == "__main__":
     print("🚀 Creating Simple Interactive Dashboard...")
-    
+
     try:
         from neural_society import NeuralEthicalSociety
         from agents import NeuralEthicalAgent
-        
+
         # Erstelle Test-Gesellschaft
         society = NeuralEthicalSociety()
-        personalities = ['utilitarian', 'deontological', 'virtue_ethics', 'balanced', 'pragmatic', 'idealistic']
-        
+        personalities = [
+            "utilitarian",
+            "deontological",
+            "virtue_ethics",
+            "balanced",
+            "pragmatic",
+            "idealistic",
+        ]
+
         for i in range(6):
             agent = NeuralEthicalAgent(f"agent_{i}")
             # Setze Persönlichkeit falls möglich
-            if hasattr(agent, 'personality'):
+            if hasattr(agent, "personality"):
                 agent.personality = personalities[i % len(personalities)]
             society.add_agent(agent)
-        
+
         # Generiere Dashboard
         dashboard_html = create_simple_interactive_dashboard(society)
-        
+
         # Speichere Dashboard
         filename = f"simple_interactive_dashboard_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
-        with open(filename, 'w', encoding='utf-8') as f:
+        with open(filename, "w", encoding="utf-8") as f:
             f.write(dashboard_html)
-        
+
         print(f"✅ Simple interactive dashboard created: {filename}")
         print("🌐 Open the HTML file in your browser to view the interactive dashboard!")
         print("📊 Features: Interactive network, real-time metrics, responsive design")
-        
+
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
+
         traceback.print_exc()

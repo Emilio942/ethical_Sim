@@ -19,10 +19,10 @@ Hauptmodule:
 __version__ = "1.0.0"
 __author__ = "Ethische Agenten Simulation Team"
 
-# Haupt-Imports für einfache Nutzung
-from .core.neural_types import *
-from .core.cognitive_architecture import *
-from .core.beliefs import *
-from .agents.agents import *
-from .society.neural_society import *
-from .scenarios.scenarios import *
+# Haupt-Imports für einfache Nutzung - Entfernt um zirkuläre Imports zu vermeiden
+# from .core.neural_types import *
+# from .core.cognitive_architecture import *
+# from .core.beliefs import *
+# from .agents.agents import *
+# from .society.neural_society import *
+# from .scenarios.scenarios import *

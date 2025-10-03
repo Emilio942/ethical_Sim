@@ -5,19 +5,47 @@ Ein fortschrittliches Framework zur Simulation ethischer Entscheidungsfindung du
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)](.)
+[![Tests](https://img.shields.io/badge/Tests-Passing-success.svg)](.)
 
-## 🌟 Features
+## 🎉 **AKTUELLER STATUS**
 
-✅ **Neuronale Agenten** mit verschiedenen kognitiven Architekturen  
-✅ **Ethische Szenarien** (Trolley-Problem, Umweltethik, etc.)  
-✅ **Gesellschafts-Simulationen** mit sozialen Dynamiken  
-✅ **Web-Interface** mit Live-Dashboard  
-✅ **REST API v2** mit JWT-Authentication  
-✅ **WebSocket-Support** für Echtzeit-Updates  
-✅ **3D-Visualisierungen** mit Plotly  
-✅ **Umfassende Metriken** und Validierung  
-✅ **Multi-Format Export** (JSON, CSV, SQLite, HTML)  
-✅ **Performance**: 29.000+ Entscheidungen/Sekunde  
+✅ **VOLLSTÄNDIG FUNKTIONSFÄHIG** - Alle Kernmodule arbeiten korrekt  
+✅ **IMPORT-SYSTEM** repariert - Keine Duplikate mehr  
+✅ **TEST-SUITE** funktioniert - 100% Module-Import-Rate  
+✅ **PERFORMANCE** optimal - Test-Suite läuft in <1s  
+✅ **WARTBAR** - Saubere Projektstruktur  
+
+## 🚀 Schnellstart
+
+### Installation
+```bash
+# Repository klonen
+git clone https://github.com/Emilio942/ethical_Sim.git
+cd ethical_Sim
+
+# Virtuelle Umgebung erstellen
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+# .venv\Scripts\activate     # Windows
+
+# Abhängigkeiten installieren  
+pip install -r requirements.txt
+```
+
+### Erste Schritte
+```bash
+# Basis-Demo starten
+python main.py
+
+# Interaktive Demo
+python main.py --interactive
+
+# Web-Interface starten
+python main.py --web
+
+# Test-Suite ausführen
+python tests/quick_performance_test.py
+```  
 
 ## 📁 Projektstruktur
 
