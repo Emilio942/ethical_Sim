@@ -7,6 +7,8 @@ Diese Version erstellt einfache, aber funktionsfähige
 interaktive Visualisierungen für das Web-Interface.
 """
 
+__all__ = ["SimpleInteractiveVisualizations", "create_simple_interactive_dashboard"]
+
 import json
 from datetime import datetime
 import random

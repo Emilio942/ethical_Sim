@@ -5,7 +5,7 @@ import random
 import pickle
 import os
 from scipy.stats import entropy
-from typing import List, Dict, Tuple, Optional, Set, Union, Callable
+from typing import List, Dict, Tuple, Optional, Set, Union, Callable, Any, cast
 
 # Import aus anderen Modulen
 from core.neural_types import NeuralProcessingType
@@ -13,6 +13,7 @@ from core.cognitive_architecture import CognitiveArchitecture
 from core.beliefs import NeuralEthicalBelief
 from scenarios.scenarios import EthicalScenario
 from agents.neural_agent import NeuralEthicalAgent
+from core.logger import logger
 
 
 class NeuralEthicalSociety:
@@ -20,6 +21,7 @@ class NeuralEthicalSociety:
 
     def __init__(self):
         """Initialisiert eine Gesellschaft von ethischen Agenten."""
+        logger.info("Initialisiere NeuralEthicalSociety")
         self.agents = {}  # agent_id -> NeuralEthicalAgent
         self.scenarios = {}  # scenario_id -> EthicalScenario
         self.belief_templates = {}  # Template-Überzeugungen für die Agentenerzeugung
@@ -38,7 +40,7 @@ class NeuralEthicalSociety:
         }
 
         # Validierungsmessungen
-        self.validation_metrics = {
+        self.validation_metrics: Dict[str, Any] = {
             "belief_distributions": {},
             "decision_patterns": {},
             "polarization_history": [],
@@ -47,19 +49,24 @@ class NeuralEthicalSociety:
 
     def add_agent(self, agent: NeuralEthicalAgent):
         """Fügt einen Agenten zur Gesellschaft hinzu."""
+        if agent.agent_id in self.agents:
+            logger.warning(f"Agent {agent.agent_id} existiert bereits und wird überschrieben.")
+        
         self.agents[agent.agent_id] = agent
         self.social_network.add_node(agent.agent_id)
+        logger.debug(f"Agent {agent.agent_id} zur Gesellschaft hinzugefügt.")
 
     def add_scenario(self, scenario: EthicalScenario):
         """Fügt ein Szenario zur Gesellschaft hinzu."""
         self.scenarios[scenario.scenario_id] = scenario
+        logger.debug(f"Szenario {scenario.scenario_id} zur Gesellschaft hinzugefügt.")
 
     def add_belief_template(
         self,
         name: str,
         category: str,
-        connections: Dict[str, Tuple[float, int]] = None,
-        associated_concepts: Dict[str, float] = None,
+        connections: Optional[Dict[str, Tuple[float, int]]] = None,
+        associated_concepts: Optional[Dict[str, float]] = None,
         emotional_valence: float = 0.0,
     ):
         """
@@ -203,7 +210,7 @@ class NeuralEthicalSociety:
 
     # === ERWEITERTE SOZIALE DYNAMIK ===
 
-    def update_social_dynamics(self, scenario: EthicalScenario = None) -> Dict[str, float]:
+    def update_social_dynamics(self, scenario: Optional[EthicalScenario] = None) -> Dict[str, float]:
         """
         Führt einen Schritt der sozialen Dynamik durch.
 
@@ -218,21 +225,21 @@ class NeuralEthicalSociety:
         # Phase 1: Soziales Lernen zwischen verbundenen Agenten
         social_learning_changes = self._perform_social_learning()
         dynamics_metrics["social_learning_intensity"] = (
-            np.mean(list(social_learning_changes.values())) if social_learning_changes else 0.0
+            float(np.mean(list(social_learning_changes.values()))) if social_learning_changes else 0.0
         )
 
         # Phase 2: Gruppenbildung und -auflösung
         group_changes = self._update_group_dynamics()
-        dynamics_metrics["group_formation_rate"] = group_changes.get("formations", 0)
-        dynamics_metrics["group_dissolution_rate"] = group_changes.get("dissolutions", 0)
+        dynamics_metrics["group_formation_rate"] = float(group_changes.get("formations", 0))
+        dynamics_metrics["group_dissolution_rate"] = float(group_changes.get("dissolutions", 0))
 
         # Phase 3: Meinungsführerschaft und Einfluss
         leadership_changes = self._update_opinion_leadership()
-        dynamics_metrics["leadership_changes"] = len(leadership_changes)
+        dynamics_metrics["leadership_changes"] = float(len(leadership_changes))
 
         # Phase 4: Netzwerk-Evolution
         network_changes = self._evolve_social_network()
-        dynamics_metrics["network_edge_changes"] = network_changes.get("edge_changes", 0)
+        dynamics_metrics["network_edge_changes"] = float(network_changes.get("edge_changes", 0))
 
         # Phase 5: Polarisierung und Konsensbildung
         polarization_metrics = self._measure_polarization()
@@ -240,10 +247,11 @@ class NeuralEthicalSociety:
 
         # Phase 6: Kulturelle Übertragung
         cultural_transmission = self._perform_cultural_transmission()
-        dynamics_metrics["cultural_transmission_rate"] = cultural_transmission
+        dynamics_metrics["cultural_transmission_rate"] = float(cultural_transmission)
 
         self.current_step += 1
-        self.validation_metrics["polarization_history"].append(polarization_metrics)
+        polarization_history = cast(List[Any], self.validation_metrics["polarization_history"])
+        polarization_history.append(polarization_metrics)
 
         return dynamics_metrics
 
@@ -482,7 +490,7 @@ class NeuralEthicalSociety:
 
         return validation_results
 
-    def _analyze_decision_patterns(self) -> Dict[str, float]:
+    def _analyze_decision_patterns(self) -> Dict[str, Dict[str, float]]:
         """Analysiert die Entscheidungsfindungsmuster der Agenten."""
         patterns = {}
 
@@ -511,7 +519,7 @@ class NeuralEthicalSociety:
     def load_society_state(cls, file_path: str) -> "NeuralEthicalSociety":
         """Lädt den Zustand einer Gesellschaft aus einer Datei."""
         with open(file_path, "rb") as file:
-            society = pickle.load(file)
+            society = cast("NeuralEthicalSociety", pickle.load(file))
             return society
 
     def run_simulation_step(self):

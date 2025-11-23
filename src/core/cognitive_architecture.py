@@ -1,9 +1,9 @@
 import numpy as np
-from typing import Dict
+from typing import Dict, Optional
 
 # Import from project modules
 from core.neural_types import NeuralProcessingType
-
+from core.config import config
 
 class CognitiveArchitecture:
     """Modelliert die kognitive Architektur eines Agenten."""
@@ -61,7 +61,7 @@ class CognitiveArchitecture:
         }
 
     def _systematic_activation(
-        self, inputs: Dict[str, float], context: Dict[str, float] = None
+        self, inputs: Dict[str, float], context: Optional[Dict[str, float]] = None
     ) -> Dict[str, float]:
         """
         Systematische, schrittweise Aktivierungsfunktion.
@@ -70,7 +70,7 @@ class CognitiveArchitecture:
         results = {}
         for key, value in inputs.items():
             # Systematisches Denken reduziert den Einfluss von Verzerrungen
-            bias_reduction = 0.7  # Reduktion der Verzerrungen
+            bias_reduction = config.cognitive.BIAS_REDUCTION_FACTOR  # Reduktion der Verzerrungen
 
             # Angepasster Wert mit reduziertem Bias-Einfluss
             results[key] = value * (
@@ -79,7 +79,7 @@ class CognitiveArchitecture:
         return results
 
     def _intuitive_activation(
-        self, inputs: Dict[str, float], context: Dict[str, float] = None
+        self, inputs: Dict[str, float], context: Optional[Dict[str, float]] = None
     ) -> Dict[str, float]:
         """
         Intuitive, schnelle Aktivierungsfunktion.
@@ -88,7 +88,7 @@ class CognitiveArchitecture:
         results = {}
         for key, value in inputs.items():
             # Intuitive Reaktionen sind stärker durch Verfügbarkeitsheuristiken beeinflusst
-            availability_effect = self.cognitive_biases.get("availability_bias", 0) * 0.5
+            availability_effect = self.cognitive_biases.get("availability_bias", 0) * config.cognitive.AVAILABILITY_BIAS_WEIGHT
 
             # Angepasster Wert mit verstärktem Einfluss verfügbarer Informationen
             if context and key in context:
@@ -99,7 +99,7 @@ class CognitiveArchitecture:
         return results
 
     def _associative_activation(
-        self, inputs: Dict[str, float], context: Dict[str, float] = None
+        self, inputs: Dict[str, float], context: Optional[Dict[str, float]] = None
     ) -> Dict[str, float]:
         """
         Assoziative Aktivierungsfunktion mit netzwerkartiger Aktivierung.
@@ -108,7 +108,7 @@ class CognitiveArchitecture:
         results = {}
 
         # Schwellenwert für Aktivierungsübertragung
-        activation_threshold = 0.3
+        activation_threshold = config.cognitive.ACTIVATION_THRESHOLD
 
         for key, value in inputs.items():
             # Basisaktivierung
@@ -123,13 +123,13 @@ class CognitiveArchitecture:
                         and other_value > activation_threshold
                     ):
                         # Einfaches assoziatives Spreading
-                        association_strength = other_value * 0.4  # Dämpfungsfaktor
+                        association_strength = other_value * config.cognitive.ASSOCIATION_DAMPING_FACTOR  # Dämpfungsfaktor
                         results[key] = max(results[key], value * (1.0 + association_strength))
 
         return results
 
     def _analogical_activation(
-        self, inputs: Dict[str, float], context: Dict[str, float] = None
+        self, inputs: Dict[str, float], context: Optional[Dict[str, float]] = None
     ) -> Dict[str, float]:
         """
         Aktivierungsfunktion basierend auf Analogien und Ähnlichkeiten.
@@ -138,7 +138,7 @@ class CognitiveArchitecture:
         results = {}
 
         # Parameter für die Analogiestärke
-        analogy_strength = 0.5
+        analogy_strength = config.cognitive.ANALOGY_STRENGTH
 
         for key, value in inputs.items():
             # Basisaktivierung
@@ -148,7 +148,7 @@ class CognitiveArchitecture:
             if context:
                 analogical_boost = (
                     sum(
-                        0.1 * v
+                        config.cognitive.ANALOGY_CONTEXT_WEIGHT * v
                         for k, v in context.items()
                         if k != key and isinstance(v, (int, float))
                     )
@@ -159,7 +159,7 @@ class CognitiveArchitecture:
         return results
 
     def _emotional_activation(
-        self, inputs: Dict[str, float], context: Dict[str, float] = None
+        self, inputs: Dict[str, float], context: Optional[Dict[str, float]] = None
     ) -> Dict[str, float]:
         """
         Emotionsgesteuerte Aktivierungsfunktion.
@@ -168,9 +168,9 @@ class CognitiveArchitecture:
         results = {}
 
         # Emotionale Reaktivität und Regulation beeinflussen die Aktivierung
-        reactivity = self.emotional_parameters.get("emotional_reactivity", 0.5)
-        regulation = self.emotional_parameters.get("emotional_regulation", 0.5)
-        negativity_bias = self.emotional_parameters.get("negativity_bias", 0.6)
+        reactivity = self.emotional_parameters.get("emotional_reactivity", config.cognitive.DEFAULT_EMOTIONAL_REACTIVITY)
+        regulation = self.emotional_parameters.get("emotional_regulation", config.cognitive.DEFAULT_EMOTIONAL_REGULATION)
+        negativity_bias = self.emotional_parameters.get("negativity_bias", config.cognitive.DEFAULT_NEGATIVITY_BIAS)
 
         for key, value in inputs.items():
             # Basisaktivierung
@@ -187,7 +187,7 @@ class CognitiveArchitecture:
                     emotional_effect = valence * reactivity * (1 - negativity_bias)
 
                 # Regulation dämpft emotionale Effekte
-                regulated_effect = emotional_effect * (1.0 - regulation * 0.5)
+                regulated_effect = emotional_effect * (1.0 - regulation * config.cognitive.EMOTIONAL_REGULATION_DAMPING)
 
                 # Angepasster Wert mit emotionalem Einfluss
                 results[key] = base_activation * (1.0 + regulated_effect)
@@ -197,7 +197,7 @@ class CognitiveArchitecture:
         return results
 
     def _narrative_activation(
-        self, inputs: Dict[str, float], context: Dict[str, float] = None
+        self, inputs: Dict[str, float], context: Optional[Dict[str, float]] = None
     ) -> Dict[str, float]:
         """
         Narrativbasierte Aktivierungsfunktion.
@@ -206,7 +206,7 @@ class CognitiveArchitecture:
         results = {}
 
         # Kohärenz-Parameter simulieren
-        coherence_bias = 0.3
+        coherence_bias = config.cognitive.COHERENCE_BIAS
 
         for key, value in inputs.items():
             # Basisaktivierung
@@ -223,7 +223,7 @@ class CognitiveArchitecture:
         return results
 
     def process_information(
-        self, inputs: Dict[str, float], context: Dict[str, float] = None
+        self, inputs: Dict[str, float], context: Optional[Dict[str, float]] = None
     ) -> Dict[str, float]:
         """
         Verarbeitet Informationen gemäß der kognitiven Architektur.
@@ -282,11 +282,11 @@ class CognitiveArchitecture:
 
         # Skalierung der Beweisgewichtung basierend auf Verarbeitungstyp
         if self.primary_processing == NeuralProcessingType.SYSTEMATIC:
-            evidence_weight = 0.7  # Systematisches Denken gewichtet Beweise stärker
+            evidence_weight = config.cognitive.SYSTEMATIC_EVIDENCE_WEIGHT  # Systematisches Denken gewichtet Beweise stärker
         elif self.primary_processing == NeuralProcessingType.EMOTIONAL:
-            evidence_weight = 0.3  # Emotionales Denken gewichtet Beweise weniger
+            evidence_weight = config.cognitive.EMOTIONAL_EVIDENCE_WEIGHT  # Emotionales Denken gewichtet Beweise weniger
         else:
-            evidence_weight = 0.5  # Neutrale Gewichtung
+            evidence_weight = config.cognitive.NEUTRAL_EVIDENCE_WEIGHT  # Neutrale Gewichtung
 
         # Angepasste Stärke der Vorannahme
         adjusted_prior_strength = prior_strength * (1.0 - evidence_weight)
@@ -301,12 +301,12 @@ class CognitiveArchitecture:
             belief_change = -adjusted_evidence_strength * prior_belief * update_rate
 
         # Prior-Anker-Effekt
-        anchoring_effect = adjusted_prior_strength * (prior_belief - 0.5) * 0.2
+        anchoring_effect = adjusted_prior_strength * (prior_belief - 0.5) * config.cognitive.ANCHORING_EFFECT_WEIGHT
 
         # Neue Überzeugungsstärke
         new_belief = prior_belief + belief_change + anchoring_effect
 
-        return np.clip(new_belief, 0.0, 1.0)
+        return float(np.clip(new_belief, 0.0, 1.0))
 
     def __str__(self):
         """String-Repräsentation der kognitiven Architektur."""

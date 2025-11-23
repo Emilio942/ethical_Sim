@@ -8,10 +8,10 @@ mathematische Berechnungen und Debugging.
 
 import json
 import csv
+from typing import Any, Dict, List, Optional, Union, Tuple, cast
 import os
 import logging
 import sys
-from typing import Dict, List, Any, Optional, Union, Tuple
 from datetime import datetime
 
 
@@ -29,7 +29,7 @@ def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
     level = level_map.get(log_level.upper(), logging.INFO)
 
     # Basis-Konfiguration
-    handlers = [logging.StreamHandler(sys.stdout)]
+    handlers: List[logging.Handler] = [logging.StreamHandler(sys.stdout)]
 
     # Optional: Log-Datei
     if log_file:
@@ -287,7 +287,7 @@ def load_agents_from_json(filename: str) -> Optional[List[Dict]]:
             data = json.load(f)
 
         logging.info(f"Agent-Daten erfolgreich aus {filename} geladen")
-        return data
+        return cast(List[Dict[str, Any]], data)
 
     except Exception as e:
         logging.error(f"Fehler beim JSON-Import: {e}")
@@ -334,7 +334,7 @@ def print_society_summary(society: Any):
     print(f"Netzwerk-Kanten: {society.social_network.number_of_edges()}")
 
     # Verarbeitungstypen-Verteilung
-    processing_types = {}
+    processing_types: Dict[str, int] = {}
     for agent in society.agents.values():
         ptype = agent.cognitive_architecture.primary_processing
         processing_types[ptype] = processing_types.get(ptype, 0) + 1
@@ -345,7 +345,7 @@ def print_society_summary(society: Any):
         print(f"  {ptype:<12} {count:>2} ({percentage:>5.1f}%)")
 
 
-def create_simulation_report(society: Any, filename: str = None) -> str:
+def create_simulation_report(society: Any, filename: Optional[str] = None) -> str:
     """Erstellt einen detaillierten Simulationsbericht."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -365,7 +365,7 @@ AGENT-ANALYSE
 """
 
     # Analysiere Agenten
-    personality_stats = {
+    personality_stats: Dict[str, List[float]] = {
         trait: []
         for trait in [
             "openness",

@@ -13,6 +13,8 @@ Features:
 - Export-Funktionen für Plots
 """
 
+__all__ = ["PlotlyWebVisualizations"]
+
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
@@ -106,8 +108,7 @@ class PlotlyWebVisualizations:
 
         # Layout
         layout = go.Layout(
-            title="3D Agent Network Visualization",
-            titlefont_size=16,
+            title=dict(text="3D Agent Network Visualization", font=dict(size=16)),
             showlegend=False,
             hovermode="closest",
             margin=dict(b=20, l=5, r=5, t=40),
@@ -188,21 +189,21 @@ class PlotlyWebVisualizations:
             decision_matrix.append(agent_decisions)
 
         # Konvertiere zu DataFrame
-        scenario_types = list(scenario_types)
+        scenario_types_list = list(scenario_types)
         matrix_data = []
 
         for i, agent_decisions in enumerate(decision_matrix):
-            row = [agent_decisions.get(scenario, 0) for scenario in scenario_types]
+            row = [agent_decisions.get(scenario, 0) for scenario in scenario_types_list]
             matrix_data.append(row)
 
-        if not matrix_data or not scenario_types:
+        if not matrix_data or not scenario_types_list:
             return "<p>No decision data available</p>"
 
         # Erstelle Heatmap
         fig = go.Figure(
             data=go.Heatmap(
                 z=matrix_data,
-                x=scenario_types,
+                x=scenario_types_list,
                 y=agent_names,
                 colorscale="Viridis",
                 hoverongaps=False,
@@ -479,6 +480,7 @@ if __name__ == "__main__":
     # Test mit Demo-Gesellschaft
     print("🚀 Testing Enhanced Web Visualizations...")
 
+if __name__ == "__main__":
     try:
         from neural_society import NeuralEthicalSociety
         from agents import NeuralEthicalAgent

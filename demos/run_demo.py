@@ -16,29 +16,31 @@ from typing import List, Dict
 # Lokale Imports mit korrigiertem Pfad
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from core.logger import logger
+
 try:
-    from agents.agents import NeuralEthicalAgent
+    from agents.neural_agent import NeuralEthicalAgent
     from scenarios.scenarios import EthicalScenario, ScenarioGenerator, get_trolley_problem
     from society.neural_society import NeuralEthicalSociety
     from core.neural_types import NeuralProcessingType
     from visualization.visualization import EthicalSimulationVisualizer, quick_dashboard
 
-    print("✅ Alle Module erfolgreich importiert!")
+    logger.info("Alle Module erfolgreich importiert!")
 except ImportError as e:
-    print(f"❌ Import-Fehler: {e}")
-    print("Bitte stellen Sie sicher, dass alle Module korrekt implementiert sind.")
-    print("Versuche ohne Visualisierung fortzufahren...")
+    logger.error(f"Import-Fehler: {e}")
+    logger.warning("Bitte stellen Sie sicher, dass alle Module korrekt implementiert sind.")
+    logger.info("Versuche ohne Visualisierung fortzufahren...")
     try:
-        from agents.agents import NeuralEthicalAgent
+        from agents.neural_agent import NeuralEthicalAgent
         from scenarios.scenarios import EthicalScenario, ScenarioGenerator, get_trolley_problem
         from society.neural_society import NeuralEthicalSociety
         from core.neural_types import NeuralProcessingType
 
-        print("✅ Kern-Module importiert (ohne Visualisierung)")
+        logger.info("Kern-Module importiert (ohne Visualisierung)")
         EthicalSimulationVisualizer = None
         quick_dashboard = None
     except ImportError as e2:
-        print(f"❌ Kritischer Import-Fehler: {e2}")
+        logger.critical(f"Kritischer Import-Fehler: {e2}")
         sys.exit(1)
 
 

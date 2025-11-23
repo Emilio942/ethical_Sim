@@ -28,7 +28,7 @@ def main():
         print("✅ Core-Module importiert")
         
         # Agent Module
-        from agents.agents import NeuralEthicalAgent
+        from agents.neural_agent import NeuralEthicalAgent
         print("✅ Agent-Module importiert")
         
         # Society Module  

@@ -54,7 +54,7 @@ class AgentValidator:
     @staticmethod
     def validate_belief_consistency(agent) -> ValidationResult:
         """Check if agent's beliefs are internally consistent."""
-        if not hasattr(agent, "beliefs") or not agent.beliefs.beliefs:
+        if not hasattr(agent, "beliefs") or not agent.beliefs:
             return ValidationResult(
                 check_name="belief_consistency",
                 validation_type=ValidationType.AGENT_CONSISTENCY,
@@ -66,18 +66,19 @@ class AgentValidator:
                 timestamp=datetime.now(),
             )
 
-        beliefs = agent.beliefs.beliefs
-        belief_values = list(beliefs.values())
+        beliefs = agent.beliefs
+        belief_values = [b.strength for b in beliefs.values()]
 
         # Check for extreme contradictions
         contradictions = 0
         total_pairs = 0
 
-        for i, (belief1, value1) in enumerate(beliefs.items()):
-            for belief2, value2 in list(beliefs.items())[i + 1 :]:
+        belief_items = list(beliefs.items())
+        for i, (belief1_name, belief1) in enumerate(belief_items):
+            for belief2_name, belief2 in belief_items[i + 1 :]:
                 total_pairs += 1
                 # Check for semantic contradictions (this is simplified)
-                if AgentValidator._are_contradictory(belief1, belief2, value1, value2):
+                if AgentValidator._are_contradictory(belief1_name, belief2_name, belief1.strength, belief2.strength):
                     contradictions += 1
 
         if total_pairs == 0:
@@ -130,11 +131,11 @@ class AgentValidator:
             scenario = decision.get("scenario", "")
 
             # Simple plausibility check based on decision consistency
-            if hasattr(agent, "beliefs") and agent.beliefs.beliefs:
+            if hasattr(agent, "beliefs") and agent.beliefs:
                 relevant_beliefs = [
-                    v
-                    for k, v in agent.beliefs.beliefs.items()
-                    if any(keyword in scenario.lower() for keyword in k.lower().split("_"))
+                    v.strength
+                    for k, v in agent.beliefs.items()
+                    if any(keyword in str(scenario).lower() for keyword in k.lower().split("_"))
                 ]
 
                 if relevant_beliefs:
@@ -250,8 +251,9 @@ class AgentValidator:
             if (word1 in belief1_lower and word2 in belief2_lower) or (
                 word2 in belief1_lower and word1 in belief2_lower
             ):
-                # Check if values are indeed contradictory
-                return (value1 > 0 and value2 < 0) or (value1 < 0 and value2 > 0)
+                # Check if values are indeed contradictory (both high)
+                # Assuming strength is 0-1, if both are > 0.7, it's a contradiction
+                return value1 > 0.7 and value2 > 0.7
 
         return False
 
@@ -442,7 +444,7 @@ class SocietyValidator:
             )
 
         response_score = 0.0
-        response_details = {"agent_responses": [], "response_variance": 0.0, "avg_confidence": 0.0}
+        response_details: Dict[str, Any] = {"agent_responses": [], "response_variance": 0.0, "avg_confidence": 0.0}
 
         # Collect agent responses
         agent_responses = []
@@ -510,7 +512,7 @@ class AnomalyDetector:
     @staticmethod
     def detect_extreme_behaviors(society) -> List[ValidationResult]:
         """Detect agents with extreme or anomalous behaviors."""
-        anomalies = []
+        anomalies: List[ValidationResult] = []
 
         if not hasattr(society, "agents") or not society.agents:
             return anomalies
@@ -570,7 +572,7 @@ class AnomalyDetector:
     @staticmethod
     def detect_network_anomalies(society) -> List[ValidationResult]:
         """Detect anomalies in social network structure."""
-        anomalies = []
+        anomalies: List[ValidationResult] = []
 
         if not hasattr(society, "social_network"):
             return anomalies
@@ -640,7 +642,7 @@ class ValidationSuite:
         self.anomaly_detector = AnomalyDetector()
         self.validation_history: List[ValidationResult] = []
 
-    def validate_agent(self, agent, agent_id: str = None) -> List[ValidationResult]:
+    def validate_agent(self, agent, agent_id: Optional[str] = None) -> List[ValidationResult]:
         """Run all validation checks on a single agent."""
         results = []
 
@@ -672,9 +674,9 @@ class ValidationSuite:
 
         return results
 
-    def validate_all(self, society, scenario=None) -> Dict[str, List[ValidationResult]]:
+    def validate_all(self, society, scenario=None) -> Dict[str, Any]:
         """Run comprehensive validation on society and all agents."""
-        all_results = {"society": [], "agents": {}, "anomalies": []}
+        all_results: Dict[str, Any] = {"society": [], "agents": {}, "anomalies": []}
 
         # Validate society
         society_results = self.validate_society(society, scenario)
@@ -694,7 +696,7 @@ class ValidationSuite:
         if not self.validation_history:
             return {"error": "No validation results available"}
 
-        summary = {
+        summary: Dict[str, Any] = {
             "total_checks": len(self.validation_history),
             "passed_checks": sum(1 for r in self.validation_history if r.passed),
             "failed_checks": sum(1 for r in self.validation_history if not r.passed),

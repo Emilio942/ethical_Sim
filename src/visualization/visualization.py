@@ -82,11 +82,15 @@ class EthicalSimulationVisualizer:
             agents: Liste der Agenten
             save_path: Pfad zum Speichern der Grafik
         """
-        fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+        # Create figure with specific layout for radar chart
+        fig = plt.figure(figsize=(15, 10))
         fig.suptitle("Persönlichkeitsprofile der Agenten", fontsize=16, fontweight="bold")
 
+        # Grid layout
+        gs = fig.add_gridspec(2, 3)
+
         # Sammle Persönlichkeitsdaten
-        personality_data = {
+        personality_data: Dict[str, List[float]] = {
             trait: []
             for trait in [
                 "openness",
@@ -104,8 +108,8 @@ class EthicalSimulationVisualizer:
                 if trait in personality_data:
                     personality_data[trait].append(value)
 
-        # Radar-Chart für durchschnittliche Persönlichkeit
-        ax_radar = axes[0, 0]
+        # Radar-Chart für durchschnittliche Persönlichkeit (Polar projection)
+        ax_radar = fig.add_subplot(gs[0, 0], polar=True)
         traits = list(personality_data.keys())
         avg_values = [np.mean(personality_data[trait]) for trait in traits]
 
@@ -118,7 +122,7 @@ class EthicalSimulationVisualizer:
         ax_radar.set_xticks(angles[:-1])
         ax_radar.set_xticklabels([t.capitalize() for t in traits])
         ax_radar.set_ylim(0, 1)
-        ax_radar.set_title("Durchschnittspersönlichkeit", fontweight="bold")
+        ax_radar.set_title("Durchschnittspersönlichkeit", fontweight="bold", pad=20)
         ax_radar.grid(True)
 
         # Histogramme für einzelne Traits
@@ -127,7 +131,7 @@ class EthicalSimulationVisualizer:
         for i, (trait, values) in enumerate(personality_data.items()):
             if i < len(trait_positions):
                 row, col = trait_positions[i]
-                ax = axes[row, col]
+                ax = fig.add_subplot(gs[row, col])
 
                 color = self.personality_colors.get(trait, "#95A5A6")
                 ax.hist(values, bins=10, alpha=0.7, color=color, edgecolor="black")
@@ -164,7 +168,13 @@ class EthicalSimulationVisualizer:
         node_colors = []
         for node in G.nodes():
             if node in society.agents:
-                processing_type = society.agents[node].cognitive_architecture.primary_processing
+                processing_type = str(
+                    society.agents[node].cognitive_architecture.primary_processing
+                ).lower()
+                # Handle enum string representation if needed
+                if "." in processing_type:
+                    processing_type = processing_type.split(".")[-1]
+                
                 color = self.processing_colors.get(processing_type, "#95A5A6")
                 node_colors.append(color)
             else:
@@ -211,7 +221,7 @@ class EthicalSimulationVisualizer:
             clustering = 0
 
         # Verarbeitungstyp-Verteilung
-        processing_distribution = {}
+        processing_distribution: Dict[Any, int] = {}
         for agent in society.agents.values():
             proc_type = agent.cognitive_architecture.primary_processing
             processing_distribution[proc_type] = processing_distribution.get(proc_type, 0) + 1
@@ -300,7 +310,7 @@ Verarbeitungstypen:
 
         # 2. Konfidenz nach Verarbeitungstyp
         unique_types = list(set(agent_types))
-        type_confidences = {ptype: [] for ptype in unique_types}
+        type_confidences: Dict[Any, List[float]] = {ptype: [] for ptype in unique_types}
 
         for i, agent_type in enumerate(agent_types):
             type_confidences[agent_type].append(confidences[i])
@@ -448,7 +458,7 @@ Verfügbare Optionen:
             bars = ax2.bar(
                 range(len(belief_names)),
                 belief_values,
-                color=plt.cm.viridis(np.linspace(0, 1, len(belief_names))),
+                color=plt.cm.get_cmap("viridis")(np.linspace(0, 1, len(belief_names))),
             )
 
             ax2.set_xlabel("Überzeugungen")
@@ -552,7 +562,7 @@ Verfügbare Optionen:
         if sum(option_counts.values()) > 0:
             colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7"]
             ax2.pie(
-                option_counts.values(),
+                list(option_counts.values()),
                 labels=[opt.replace("_", " ").title() for opt in option_counts.keys()],
                 autopct="%1.1f%%",
                 colors=colors[: len(options)],
@@ -560,9 +570,9 @@ Verfügbare Optionen:
 
         ax2.set_title("Entscheidungsverteilung", fontweight="bold")
 
-        # 3. Persönlichkeitsverteilung (Mitte links)
-        ax3 = fig.add_subplot(gs[1, :2])
-        personality_data = {
+        # 3. Persönlichkeitsverteilung (unten links)
+        ax3 = fig.add_subplot(gs[1, 0])
+        personality_data: Dict[str, List[float]] = {
             trait: []
             for trait in [
                 "openness",
@@ -580,7 +590,7 @@ Verfügbare Optionen:
 
         traits = list(personality_data.keys())
         avg_values = [
-            np.mean(personality_data[trait]) if personality_data[trait] else 0 for trait in traits
+            float(np.mean(personality_data[trait])) if personality_data[trait] else 0.0 for trait in traits
         ]
 
         x_pos = np.arange(len(traits))
@@ -599,7 +609,7 @@ Verfügbare Optionen:
 
         # 4. Verarbeitungstypen (Mitte rechts)
         ax4 = fig.add_subplot(gs[1, 2:])
-        processing_distribution = {}
+        processing_distribution: Dict[Any, int] = {}
         for agent in society.agents.values():
             proc_type = agent.cognitive_architecture.primary_processing
             processing_distribution[proc_type] = processing_distribution.get(proc_type, 0) + 1

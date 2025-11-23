@@ -1,6 +1,7 @@
 import numpy as np
 import random
 from typing import Dict, List, Optional, Tuple, Any
+from core.logger import logger
 
 
 class EthicalScenario:
@@ -12,9 +13,9 @@ class EthicalScenario:
         description: str,
         relevant_beliefs: Dict[str, float],
         options: Dict[str, Dict[str, float]],
-        option_attributes: Dict[str, Dict[str, float]] = None,
-        outcome_feedback: Dict[str, Dict[str, float]] = None,
-        moral_implications: Dict[str, Dict[str, float]] = None,
+        option_attributes: Optional[Dict[str, Dict[str, float]]] = None,
+        outcome_feedback: Optional[Dict[str, Dict[str, float]]] = None,
+        moral_implications: Optional[Dict[str, Dict[str, float]]] = None,
     ):
         """
         Initialisiert ein ethisches Szenario.
@@ -43,7 +44,7 @@ class EthicalScenario:
         self.complexity = 0.5
 
         # Narrative Elemente (für narrative Verarbeitung)
-        self.narrative_elements = {
+        self.narrative_elements: Dict[str, Any] = {
             "characters": [],
             "conflict": "",
             "context": "",
@@ -60,6 +61,14 @@ class EthicalScenario:
         """Gibt die Auswirkung einer Option auf eine spezifische Überzeugung zurück."""
         if option_name in self.options and belief_name in self.options[option_name]:
             return self.options[option_name][belief_name]
+        
+        # Logging für fehlende Daten (Silent Failure Prevention)
+        if option_name not in self.options:
+            logger.debug(f"Option '{option_name}' nicht in Szenario '{self.scenario_id}' gefunden.")
+        elif belief_name not in self.options[option_name]:
+            # Dies ist normal, wenn eine Option keinen Einfluss auf eine bestimmte Überzeugung hat
+            pass
+            
         return 0.0
 
     def get_moral_foundation_impact(self, option_name: str, foundation: str) -> float:
@@ -69,6 +78,10 @@ class EthicalScenario:
             and foundation in self.moral_implications[option_name]
         ):
             return self.moral_implications[option_name][foundation]
+            
+        if option_name not in self.moral_implications:
+             logger.debug(f"Keine moralischen Implikationen für Option '{option_name}' in Szenario '{self.scenario_id}'.")
+             
         return 0.0
 
     def add_narrative_element(self, element_type: str, content: str):
@@ -218,7 +231,7 @@ class ScenarioGenerator:
         }
 
     def create_scenario_from_template(
-        self, template_name: str, scenario_id: str = None
+        self, template_name: str, scenario_id: Optional[str] = None
     ) -> EthicalScenario:
         """Erstellt ein Szenario basierend auf einem Template."""
         if template_name not in self.templates:
@@ -245,7 +258,7 @@ class ScenarioGenerator:
 
         return scenario
 
-    def generate_random_scenario(self, scenario_id: str = None) -> EthicalScenario:
+    def generate_random_scenario(self, scenario_id: Optional[str] = None) -> EthicalScenario:
         """Generiert ein zufälliges Szenario."""
         scenario_id = scenario_id or f"random_{random.randint(1000, 9999)}"
 
@@ -265,7 +278,7 @@ class ScenarioGenerator:
         relevant_beliefs = {belief: random.uniform(0.3, 0.9) for belief in selected_beliefs}
 
         # Zwei Optionen mit zufälligen Auswirkungen
-        options = {}
+        options: Dict[str, Dict[str, float]] = {}
         for i, option_name in enumerate([f"Option_A", f"Option_B"]):
             options[option_name] = {}
             for belief in selected_beliefs:

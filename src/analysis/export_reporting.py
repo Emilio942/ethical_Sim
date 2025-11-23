@@ -11,7 +11,7 @@ import pickle
 import sqlite3
 from pathlib import Path
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional, Union, Set
 from dataclasses import dataclass, asdict
 from enum import Enum
 import numpy as np
@@ -107,7 +107,7 @@ class DataExporter:
     @staticmethod
     def _extract_society_data(society) -> Dict[str, Any]:
         """Extract comprehensive data from society."""
-        data = {
+        data: Dict[str, Any] = {
             "metadata": {
                 "export_timestamp": datetime.now().isoformat(),
                 "society_type": type(society).__name__,
@@ -121,8 +121,16 @@ class DataExporter:
 
         # Extract agent data
         if hasattr(society, "agents"):
-            for i, agent in enumerate(society.agents):
-                agent_data = DataExporter._extract_agent_data(agent, f"agent_{i}")
+            agents_iter = (
+                society.agents.items()
+                if isinstance(society.agents, dict)
+                else enumerate(society.agents)
+            )
+            for agent_id, agent in agents_iter:
+                # If iterating over list, agent_id is index, agent is object
+                # If iterating over dict, agent_id is key, agent is object
+                real_agent_id = getattr(agent, "agent_id", str(agent_id))
+                agent_data = DataExporter._extract_agent_data(agent, real_agent_id)
                 data["agents"].append(agent_data)
 
         # Extract social network data
@@ -138,15 +146,17 @@ class DataExporter:
 
         # Extract group dynamics
         if hasattr(society, "groups"):
-            data["group_dynamics"]["groups"] = society.groups
+            data["group_dynamics"]["groups"] = {
+                k: list(v) if isinstance(v, set) else v for k, v in society.groups.items()
+            }
         if hasattr(society, "group_cohesion"):
             data["group_dynamics"]["cohesion"] = society.group_cohesion
         if hasattr(society, "opinion_leaders"):
             data["group_dynamics"]["opinion_leaders"] = society.opinion_leaders
 
         # Extract simulation state
-        if hasattr(society, "simulation_step"):
-            data["simulation_state"]["step"] = society.simulation_step
+        if hasattr(society, "current_step"):
+            data["simulation_state"]["step"] = society.current_step
         if hasattr(society, "last_scenario"):
             data["simulation_state"]["last_scenario"] = society.last_scenario
 
@@ -155,7 +165,7 @@ class DataExporter:
     @staticmethod
     def _extract_agent_data(agent, agent_id: str) -> Dict[str, Any]:
         """Extract comprehensive data from an agent."""
-        data = {
+        data: Dict[str, Any] = {
             "agent_id": agent_id,
             "agent_type": type(agent).__name__,
             "beliefs": {},
@@ -167,44 +177,53 @@ class DataExporter:
 
         # Extract beliefs
         if hasattr(agent, "beliefs") and agent.beliefs:
-            if hasattr(agent.beliefs, "beliefs"):
+            if isinstance(agent.beliefs, dict):
+                # Check if values are objects or primitives
+                first_val = next(iter(agent.beliefs.values()))
+                if hasattr(first_val, "strength"):
+                    data["beliefs"] = {k: v.strength for k, v in agent.beliefs.items()}
+                    # Extract uncertainty/confidence if available on belief objects
+                    uncertainties = {
+                        k: v.certainty for k, v in agent.beliefs.items() if hasattr(v, "certainty")
+                    }
+                    if uncertainties:
+                        data["beliefs"]["_uncertainty"] = uncertainties
+                else:
+                    data["beliefs"] = dict(agent.beliefs)
+            elif hasattr(agent.beliefs, "beliefs"):  # Nested object structure
                 data["beliefs"] = dict(agent.beliefs.beliefs)
-            if hasattr(agent.beliefs, "uncertainty"):
-                data["beliefs"]["_uncertainty"] = agent.beliefs.uncertainty
-            if hasattr(agent.beliefs, "confidence"):
-                data["beliefs"]["_confidence"] = agent.beliefs.confidence
 
         # Extract decision history
         if hasattr(agent, "decision_history"):
             data["decision_history"] = [
                 {
                     "timestamp": d.get("timestamp", ""),
-                    "scenario": d.get("scenario", ""),
-                    "value": d.get("value", 0.5),
+                    "scenario": d.get("scenario_id", d.get("scenario", "")),
+                    "value": d.get("chosen_option", ""),
                     "confidence": d.get("confidence", 0.5),
-                    "reasoning": d.get("reasoning", ""),
+                    "reasoning": str(d.get("option_scores", "")),
                     "learning_mode": d.get("learning_mode", ""),
                 }
                 for d in agent.decision_history
             ]
 
         # Extract personality traits
-        if hasattr(agent, "personality"):
+        if hasattr(agent, "personality_traits"):
+            data["personality"] = dict(agent.personality_traits)
+        elif hasattr(agent, "personality"):
             data["personality"] = dict(agent.personality)
 
         # Extract learning state
+        if hasattr(agent, "rl_system"):
+            data["learning_state"]["rl_system"] = str(agent.rl_system)
         if hasattr(agent, "q_table"):
             data["learning_state"]["q_table"] = dict(agent.q_table)
-        if hasattr(agent, "learning_rate"):
-            data["learning_state"]["learning_rate"] = agent.learning_rate
-        if hasattr(agent, "confidence_threshold"):
-            data["learning_state"]["confidence_threshold"] = agent.confidence_threshold
 
         # Extract social connections
-        if hasattr(agent, "trust_network"):
-            data["social_connections"]["trust_network"] = dict(agent.trust_network)
-        if hasattr(agent, "reputation_scores"):
-            data["social_connections"]["reputation_scores"] = dict(agent.reputation_scores)
+        if hasattr(agent, "social_connections"):
+            data["social_connections"]["connections"] = dict(agent.social_connections)
+        if hasattr(agent, "social_learning"):
+            data["social_connections"]["social_learning"] = str(agent.social_learning)
 
         return data
 
@@ -294,13 +313,13 @@ class DataExporter:
 
         # Write CSV
         if rows:
-            fieldnames = set()
+            fieldnames_set: Set[str] = set()
             for row in rows:
-                fieldnames.update(row.keys())
-            fieldnames = sorted(fieldnames)
+                fieldnames_set.update(row.keys())
+            fieldnames_list = sorted(fieldnames_set)
 
             with open(filepath, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer = csv.DictWriter(f, fieldnames=fieldnames_list)
                 writer.writeheader()
                 writer.writerows(rows)
 
@@ -327,13 +346,13 @@ class DataExporter:
                 rows.append(row)
 
         if rows:
-            fieldnames = set()
+            fieldnames_set: Set[str] = set()
             for row in rows:
-                fieldnames.update(row.keys())
-            fieldnames = sorted(fieldnames)
+                fieldnames_set.update(row.keys())
+            fieldnames_list = sorted(fieldnames_set)
 
             with open(filepath, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer = csv.DictWriter(f, fieldnames=fieldnames_list)
                 writer.writeheader()
                 writer.writerows(rows)
 
@@ -395,13 +414,13 @@ class DataExporter:
         flatten_metrics(metrics_data)
 
         if rows:
-            fieldnames = set()
+            fieldnames_set: Set[str] = set()
             for row in rows:
-                fieldnames.update(row.keys())
-            fieldnames = sorted(fieldnames)
+                fieldnames_set.update(row.keys())
+            fieldnames_list = sorted(fieldnames_set)
 
             with open(filepath, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer = csv.DictWriter(f, fieldnames=fieldnames_list)
                 writer.writeheader()
                 writer.writerows(rows)
 

@@ -30,7 +30,7 @@ class NeuralEthicalBelief:
         self.emotional_valence = np.clip(emotional_valence, -1.0, 1.0)
 
         # Verbindungen zu anderen Überzeugungen (Belief -> (Einfluss, Polarität))
-        self.connections = {}
+        self.connections: Dict[str, Tuple[float, int]] = {}
 
         # Aktivierungsniveau (für spreading activation)
         self.activation = 0.0
@@ -39,7 +39,7 @@ class NeuralEthicalBelief:
         self.last_activation_time = 0
 
         # Assoziative Konzepte (für associative processing)
-        self.associated_concepts = {}  # concept_name -> strength
+        self.associated_concepts: Dict[str, float] = {}  # concept_name -> strength
 
     def add_connection(self, belief_name: str, influence_strength: float, polarity: int):
         """Fügt eine Verbindung zu einer anderen Überzeugung hinzu."""

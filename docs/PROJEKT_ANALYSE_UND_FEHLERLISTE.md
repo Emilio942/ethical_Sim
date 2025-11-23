@@ -420,6 +420,30 @@ sys.path.append('..')
 
 ---
 
+## 🚧 **BEKANNTE LIMITATIONEN & RISIKEN (AUDITIVE MIGRATION)**
+
+**Hinzugefügt am:** 22. November 2025
+**Status:** Akzeptiert ("Pflasterprinzip")
+
+Im Rahmen der geplanten Migration auf eine auditive Verarbeitungsarchitektur (A1 Cortex) wurden folgende fundamentale Probleme identifiziert, die aufgrund von Ressourcenmangel und Komplexität vorerst nicht vollständig gelöst werden können. Diese Punkte werden als "Known Limitations" dokumentiert.
+
+### 1. Datenmangel & Training Objective
+*   **Problem:** Es fehlen spezialisierte, hochqualitative Datensätze, um komplexe Spectro-Temporal Receptive Fields (STRFs) biologisch plausibel zu trainieren.
+*   **Konsequenz:** Das Netzwerk wird vermutlich keine echten, generalisierbaren auditiven Konzepte lernen, sondern eher auf einfache statistische Muster (Overfitting) zurückfallen.
+*   **Status:** Akzeptiert. Wir nutzen verfügbare Standard-Datasets (z.B. Speech Commands) als "Platzhalter", wohl wissend, dass diese die biologische Realität nur unzureichend abbilden.
+
+### 2. Komplexitäts-Lücke (Complexity Gap)
+*   **Problem:** Die Simulation der echten Haarzellen-Dynamik (Cochlea) und der neuronalen Adaptation (Synaptic Depression/Facilitation) erfordert Rechenleistung und Modellkomplexität, die den Rahmen sprengt.
+*   **Konsequenz:** Die implementierten Filterbanken (Gammatone/PCEN) sind nur grobe Approximationen. Das "Binding Problem" (Zusammenfügen von Frequenzen zu Objekten) wird architektonisch nicht sauber gelöst.
+*   **Status:** Akzeptiert. Wir verwenden vereinfachte Modelle (Asymmetrische CNNs), um überhaupt ein lauffähiges System zu haben ("Better than nothing").
+
+### 3. Ressourcen-Constraints
+*   **Problem:** Echtes Training von auditiven Modellen mit zeitlicher Tiefe (Long-Context) erfordert massive GPU-Ressourcen, die nicht zur Verfügung stehen.
+*   **Konsequenz:** Wir müssen mit kleinen Batch-Sizes, kurzen Audio-Schnipseln und reduzierten Modellgrößen arbeiten.
+*   **Status:** Akzeptiert. Das Ziel ist ein *Proof-of-Concept* der Architektur, nicht State-of-the-Art Performance.
+
+---
+
 ## ⚖️ **RISIKO-BEWERTUNG**
 
 ### **Hohe Risiken:**

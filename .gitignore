@@ -187,3 +187,23 @@ models/*.joblib
 *.log
 logs/
 log/
+
+# Datasets and Large Data
+data/
+dataset/
+datasets/
+*.wav
+*.mp3
+*.flac
+
+# Output and Visualizations
+output/
+visualizations/
+demo_outputs/
+*.png
+*.svg
+*.jpg
+
+# Temporary Test Artifacts
+test_export_*.csv
+test_dashboard.html

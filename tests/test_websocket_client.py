@@ -6,10 +6,12 @@ WebSocket Test Client für Live-Updates
 Test-Client für die WebSocket-Funktionalität des Web-Interfaces.
 """
 
+import pytest
 import asyncio
 import socketio
 
 
+@pytest.mark.asyncio
 async def test_websocket_connection():
     """Test WebSocket-Verbindung und Event-Handling"""
 

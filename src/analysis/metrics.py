@@ -7,7 +7,7 @@ and decision quality across agents and societies.
 
 import numpy as np
 import networkx as nx
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Dict, List, Tuple, Any, Optional, cast
 from dataclasses import dataclass
 from enum import Enum
 import json
@@ -44,11 +44,11 @@ class EthicalConsistencyMetrics:
     @staticmethod
     def internal_consistency(agent) -> float:
         """Measure internal consistency of an agent's beliefs."""
-        if not hasattr(agent, "beliefs") or not agent.beliefs.beliefs:
+        if not hasattr(agent, "beliefs") or not agent.beliefs:
             return 0.0
 
-        beliefs = agent.beliefs.beliefs
-        belief_values = [abs(beliefs[belief]) for belief in beliefs]
+        beliefs = agent.beliefs
+        belief_values = [b.strength for b in beliefs.values()]
 
         if len(belief_values) < 2:
             return 1.0
@@ -58,7 +58,7 @@ class EthicalConsistencyMetrics:
         # Convert to consistency score (lower variance = higher consistency)
         consistency = 1.0 / (1.0 + variance)
 
-        return min(1.0, max(0.0, consistency))
+        return float(min(1.0, max(0.0, consistency)))
 
     @staticmethod
     def temporal_stability(agent, history_length: int = 10) -> float:
@@ -79,12 +79,12 @@ class EthicalConsistencyMetrics:
         std_dev = np.std(decision_values)
         stability = 1.0 / (1.0 + std_dev)
 
-        return min(1.0, max(0.0, stability))
+        return float(min(1.0, max(0.0, stability)))
 
     @staticmethod
-    def cross_domain_consistency(agent, domains: List[str] = None) -> float:
+    def cross_domain_consistency(agent, domains: Optional[List[str]] = None) -> float:
         """Measure consistency across different ethical domains."""
-        if not hasattr(agent, "beliefs") or not agent.beliefs.beliefs:
+        if not hasattr(agent, "beliefs") or not agent.beliefs:
             return 0.0
 
         if domains is None:
@@ -93,7 +93,7 @@ class EthicalConsistencyMetrics:
         domain_scores = {}
         for domain in domains:
             domain_beliefs = {
-                k: v for k, v in agent.beliefs.beliefs.items() if domain.lower() in k.lower()
+                k: v.strength for k, v in agent.beliefs.items() if domain.lower() in k.lower()
             }
             if domain_beliefs:
                 domain_scores[domain] = np.mean(list(domain_beliefs.values()))
@@ -106,7 +106,7 @@ class EthicalConsistencyMetrics:
         variance = np.var(scores)
         consistency = 1.0 / (1.0 + variance)
 
-        return min(1.0, max(0.0, consistency))
+        return float(min(1.0, max(0.0, consistency)))
 
 
 class SocialDynamicsMetrics:
@@ -135,7 +135,7 @@ class SocialDynamicsMetrics:
 
         average_distance = total_distance / comparisons
         # Normalize to 0-1 scale
-        return min(1.0, average_distance / 2.0)
+        return float(min(1.0, average_distance / 2.0))
 
     @staticmethod
     def consensus_level(society, threshold: float = 0.1) -> float:
@@ -177,7 +177,7 @@ class SocialDynamicsMetrics:
             return 0.0
 
         density = n_edges / max_edges
-        return min(1.0, density)
+        return float(min(1.0, density))
 
     @staticmethod
     def influence_distribution(society) -> Dict[str, float]:
@@ -235,7 +235,7 @@ class SocialDynamicsMetrics:
             strength2 = belief2.strength if hasattr(belief2, "strength") else 0.5
             distance += (strength1 - strength2) ** 2
 
-        return np.sqrt(distance / len(common_beliefs))
+        return float(np.sqrt(distance / len(common_beliefs)))
 
     @staticmethod
     def _gini_coefficient(values: List[float]) -> float:
@@ -246,7 +246,7 @@ class SocialDynamicsMetrics:
         values = sorted(values)
         n = len(values)
         cumsum = np.cumsum(values)
-        return (n + 1 - 2 * np.sum(cumsum) / cumsum[-1]) / n
+        return float((n + 1 - 2 * np.sum(cumsum) / cumsum[-1]) / n)
 
 
 class DecisionQualityMetrics:
@@ -282,7 +282,7 @@ class DecisionQualityMetrics:
 
         # Normalize by maximum possible entropy
         max_entropy = np.log2(len(decision_values))
-        return entropy / max_entropy if max_entropy > 0 else 0.0
+        return float(entropy / max_entropy) if max_entropy > 0 else 0.0
 
     @staticmethod
     def ethical_alignment(agent, target_principles: Dict[str, float]) -> float:
@@ -298,7 +298,7 @@ class DecisionQualityMetrics:
                 alignment = 1.0 - abs(agent_value - target_value) / 2.0
                 alignment_scores.append(alignment)
 
-        return np.mean(alignment_scores) if alignment_scores else 0.0
+        return float(np.mean(alignment_scores)) if alignment_scores else 0.0
 
 
 class LearningProgressMetrics:
@@ -323,7 +323,7 @@ class LearningProgressMetrics:
         older_avg = np.mean([d.get("value", 0.5) for d in older_decisions])
 
         # Learning rate as absolute change
-        return abs(recent_avg - older_avg)
+        return float(abs(recent_avg - older_avg))
 
     @staticmethod
     def adaptation_efficiency(agent) -> float:
@@ -346,7 +346,7 @@ class LearningProgressMetrics:
         slope = np.polyfit(x, confidences, 1)[0]
 
         # Normalize slope to 0-1 range
-        return min(1.0, max(0.0, slope + 0.5))
+        return float(min(1.0, max(0.0, slope + 0.5)))
 
 
 class MetricsCollector:
@@ -359,7 +359,7 @@ class MetricsCollector:
         self.decision_metrics = DecisionQualityMetrics()
         self.learning_metrics = LearningProgressMetrics()
 
-    def collect_agent_metrics(self, agent, agent_id: str = None) -> Dict[str, MetricResult]:
+    def collect_agent_metrics(self, agent, agent_id: Optional[str] = None) -> Dict[str, MetricResult]:
         """Collect all metrics for a single agent."""
         agent_id = agent_id or f"agent_{id(agent)}"
         metrics = {}
@@ -475,7 +475,7 @@ class MetricsCollector:
 
     def collect_all_metrics(self, society) -> Dict[str, Any]:
         """Collect all metrics for society and its agents."""
-        all_metrics = {}
+        all_metrics: Dict[str, Any] = {}
 
         # Society metrics
         society_metrics = self.collect_society_metrics(society)
@@ -514,8 +514,9 @@ class MetricsCollector:
 
         elif format.lower() == "csv":
             if export_data:
+                metadata = cast(Dict[str, Any], export_data[0]["metadata"])
                 fieldnames = ["name", "value", "timestamp", "description"] + list(
-                    export_data[0]["metadata"].keys()
+                    metadata.keys()
                 )
 
                 with open(filepath, "w", newline="") as f:
@@ -529,7 +530,7 @@ class MetricsCollector:
                             "timestamp": row["timestamp"],
                             "description": row["description"],
                         }
-                        flat_row.update(row["metadata"])
+                        flat_row.update(cast(Dict[str, Any], row["metadata"]))
                         writer.writerow(flat_row)
 
     def get_summary_report(self) -> Dict[str, Any]:
@@ -538,7 +539,7 @@ class MetricsCollector:
             return {"error": "No metrics collected yet"}
 
         # Group metrics by type
-        metric_groups = {}
+        metric_groups: Dict[str, List[float]] = {}
         for metric in self.metric_history:
             metric_type = metric.name.split("_")[1] if "_" in metric.name else "other"
             if metric_type not in metric_groups:
@@ -546,7 +547,7 @@ class MetricsCollector:
             metric_groups[metric_type].append(metric.value)
 
         # Calculate summary statistics
-        summary = {
+        summary: Dict[str, Any] = {
             "total_metrics": len(self.metric_history),
             "collection_period": {
                 "start": min(m.timestamp for m in self.metric_history).isoformat(),
