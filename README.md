@@ -15,38 +15,6 @@ Ein fortschrittliches Framework zur Simulation ethischer Entscheidungsfindung du
 ✅ **PERFORMANCE** optimal - Test-Suite läuft in <1s  
 ✅ **WARTBAR** - Saubere Projektstruktur  
 
-## 🚀 Schnellstart
-
-### Installation
-```bash
-# Repository klonen
-git clone https://github.com/Emilio942/ethical_Sim.git
-cd ethical_Sim
-
-# Virtuelle Umgebung erstellen
-python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# .venv\Scripts\activate     # Windows
-
-# Abhängigkeiten installieren  
-pip install -r requirements.txt
-```
-
-### Erste Schritte
-```bash
-# Basis-Demo starten
-python main.py
-
-# Interaktive Demo
-python main.py --interactive
-
-# Web-Interface starten
-python main.py --web
-
-# Test-Suite ausführen
-python tests/quick_performance_test.py
-```  
-
 ## 📁 Projektstruktur
 
 ```
@@ -96,6 +64,11 @@ ethik/
 git clone https://github.com/Emilio942/ethical_Sim.git
 cd ethical_Sim
 
+# Virtuelle Umgebung erstellen
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+# .venv\Scripts\activate     # Windows
+
 # Abhängigkeiten installieren
 pip install -r requirements.txt
 ```
@@ -135,7 +108,7 @@ Browser-basierte Benutzeroberfläche mit:
 
 ### Vollständige Testsuite
 ```bash
-python tests/final_project_tests.py
+python tests/test_final_project.py
 ```
 
 ### Deep System Tests

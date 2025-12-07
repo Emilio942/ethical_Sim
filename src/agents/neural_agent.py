@@ -391,6 +391,11 @@ class NeuralEthicalAgent:
         """Fügt eine soziale Verbindung zu einem anderen Agenten hinzu."""
         self.social_connections[agent_id] = np.clip(connection_strength, 0.0, 1.0)
 
+    def remove_social_connection(self, agent_id: str):
+        """Entfernt eine soziale Verbindung."""
+        if agent_id in self.social_connections:
+            del self.social_connections[agent_id]
+
     def add_group_identity(self, group_name: str, identification_strength: float):
         """Fügt eine Gruppenidentität hinzu."""
         self.group_identities[group_name] = np.clip(identification_strength, 0.0, 1.0)
@@ -2195,3 +2200,22 @@ class NeuralEthicalAgent:
                             propagated_changes[connected_belief] = new_strength - old_strength
 
         return propagated_changes
+
+    def decide_and_learn(self, scenario: Optional["EthicalScenario"] = None):
+        """
+        Trifft eine Entscheidung (wenn Szenario vorhanden) und führt Lernprozesse durch.
+
+        Args:
+            scenario: Optionales ethisches Szenario
+        """
+        # Wenn Szenario vorhanden, Entscheidung treffen
+        if scenario:
+            self.make_decision(scenario, enhanced=True)
+
+        # Temporale Dynamik (Momentum, Decay)
+        self.temporal_belief_dynamics()
+
+        # Meta-kognitive Prozesse (wenn keine aktive Entscheidung)
+        if not scenario and self.metacognition["thinking_about_thinking"]:
+            # Selbst-Reflektion in Ruhephasen
+            pass
