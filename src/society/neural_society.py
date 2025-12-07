@@ -384,11 +384,14 @@ class NeuralEthicalSociety:
         # Entferne zufällig Verbindungen, um das Netzwerk dynamisch zu halten
         for agent_id, agent in self.agents.items():
             if len(agent.social_connections) > 3:  # Maximal 3 Verbindungen beibehalten
+                # agent.social_connections is a dictionary, need to get keys as a list
+                connections_list = list(agent.social_connections.keys())
                 connections_to_remove = random.sample(
-                    agent.social_connections, len(agent.social_connections) - 3
+                    connections_list, len(agent.social_connections) - 3
                 )
                 for conn_id in connections_to_remove:
-                    self.social_network.remove_edge(agent_id, conn_id)
+                    if self.social_network.has_edge(agent_id, conn_id):
+                        self.social_network.remove_edge(agent_id, conn_id)
                     agent.remove_social_connection(conn_id)
                     network_changes["edge_changes"] += 1
 

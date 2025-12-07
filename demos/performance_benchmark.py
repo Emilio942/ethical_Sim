@@ -15,12 +15,13 @@ from datetime import datetime
 
 # Import der Simulation-Module
 sys.path.append(".")
-from neural_society import NeuralEthicalSociety
-from agents import NeuralEthicalAgent
-from scenarios import ScenarioGenerator
-from metrics import MetricsCollector
-from validation import ValidationSuite
-from export_reporting import DataExporter
+sys.path.append("src")
+from society.neural_society import NeuralEthicalSociety
+from agents.neural_agent import NeuralEthicalAgent
+from scenarios.scenarios import ScenarioGenerator
+from analysis.metrics import MetricsCollector
+from analysis.validation import ValidationSuite
+from analysis.export_reporting import DataExporter
 
 
 class PerformanceBenchmark:
@@ -127,9 +128,10 @@ class PerformanceBenchmark:
         """Benchmark: Datenexport"""
 
         def export_data():
-            exporter = DataExporter(society)
+            from analysis.export_reporting import ExportConfig, ExportFormat
             filename = f"benchmark_export_{int(time.time())}.json"
-            exporter.export_json(filename)
+            config = ExportConfig(format=ExportFormat.JSON, filepath=filename)
+            DataExporter.export_society_data(society, config)
             return filename
 
         return self.time_function(export_data, "Data Export (JSON)")
