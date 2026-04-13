@@ -58,6 +58,12 @@ class STRFGenerator:
         
         return strf
 
+    # --- MATHEMATICAL INQUIRY 3: SPECTRAL GEOMETRY ---
+    # Question: To address the "Harmonic Trap", should the Gabor STRFs be replaced 
+    # by Log-Normal Wavelets? How would the Laplace-Beltrami operator applied 
+    # to the log-frequency manifold optimize the scale-invariance of the 
+    # auditory filters across different octaves?
+
 class AuditoryExpertModule:
     """
     Simulates a cortical column / expert module in A1.
@@ -261,34 +267,40 @@ class AuditoryReadout:
 
 class LIFNeuron:
     """
-    Leaky Integrate-and-Fire Neuron model.
-    Implements Phase 3.3 (Spiking Dynamics).
+    Stochastic Leaky Integrate-and-Fire Neuron.
+    Includes a Wiener Process (dW_t) and Inverse Gaussian FPT analytics.
     """
-    def __init__(self, tau: float = 20.0, threshold: float = 1.0, v_reset: float = 0.0, dt: float = 1.0):
-        self.tau = tau # Membrane time constant (ms)
+    def __init__(self, tau: float = 20.0, threshold: float = 1.0, v_reset: float = 0.0, dt: float = 1.0, sigma_noise: float = 0.05):
+        self.tau = tau 
         self.threshold = threshold
         self.v_reset = v_reset
-        self.dt = dt # Simulation step (ms)
-        self.v = v_reset # Membrane potential
+        self.dt = dt 
+        self.sigma_noise = sigma_noise
+        self.v = v_reset 
         
     def update(self, input_current: float) -> int:
-        """
-        Updates neuron state.
-        Returns 1 if spike, 0 otherwise.
-        """
-        # dV/dt = -(V - V_rest)/tau + I
-        # Discrete update: V(t+1) = V(t) + dt/tau * (-(V(t) - V_rest) + Input)
-        # Assuming V_rest = 0
+        """Update with Euler-Maruyama stochastic integration."""
+        # Deterministic part
+        dv_det = (self.dt / self.tau) * (-self.v + input_current)
+        # Stochastic part (Wiener Process)
+        dw = self.sigma_noise * np.sqrt(self.dt) * np.random.randn()
         
-        dv = (self.dt / self.tau) * (-self.v + input_current)
-        self.v += dv
+        self.v += dv_det + dw
         
         spike = 0
         if self.v >= self.threshold:
             spike = 1
             self.v = self.v_reset
-            
         return spike
+
+    def analytic_fpt_params(self, mean_current: float) -> Tuple[float, float]:
+        """
+        Returns (mu, lambda) for the Inverse Gaussian First Passage Time distribution.
+        Used as a regularization term for biologically plausible spiking.
+        """
+        mu = self.tau * (self.threshold - self.v_reset) / (mean_current + 1e-8)
+        lam = (2 * self.sigma_noise**2 * (self.threshold - self.v_reset)**2) / (self.sigma_noise**2 + 1e-8)
+        return mu, lam
 
     def process_signal(self, input_signal: np.ndarray) -> np.ndarray:
         """

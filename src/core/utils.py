@@ -8,6 +8,7 @@ mathematische Berechnungen und Debugging.
 
 import json
 import csv
+import numpy as np
 from typing import Any, Dict, List, Optional, Union, Tuple, cast
 import os
 import logging
@@ -175,6 +176,31 @@ def normalize_dict_values(data: Dict[str, float]) -> Dict[str, float]:
         return {k: 0.5 for k in data.keys()}  # Alle Werte gleich
 
     return {k: (v - min_val) / (max_val - min_val) for k, v in data.items()}
+
+def geometric_product(A: np.ndarray, B: np.ndarray) -> np.ndarray:
+    """
+    Computes a simplified Geometric Product (Clifford Algebra) for beliefs.
+    Result = Inner Product (Consensus) + Outer Product (Tension/Bivector).
+    Ensures non-commutative reasoning: A*B != B*A.
+    """
+    # A, B are vectors in R^n
+    inner = np.dot(A, B)
+    # Outer product (Bivector part)
+    outer = np.outer(A, B) - np.outer(B, A)
+    
+    # We represent the multivector as [scalar, vector_a, vector_b, bivector_flat]
+    # For simulation purposes, we return the flattened multivector components
+    return np.concatenate([[inner], A, B, outer.flatten()])
+
+# --- MATHEMATISCHE ANFRAGE: GEOMETRISCHE ALGEBRA ---
+# Frage: Könnte der Überzeugungsraum als eine geometrische Algebra 
+# dargestellt werden? Erlaubt uns das geometrische Produkt, nicht-kommutative 
+# moralische Logik zu modellieren?
+
+# --- MATHEMATICAL INQUIRY 33: NON-COMMUTATIVE GEOMETRY ---
+# Question: Can the ethical space be modeled as a Spectral Triple (A, H, D)? 
+# Would the Dirac Operator D allow us to compute the 'Moral Distance' 
+# between agents without a global metric?
 
 
 def calculate_entropy(probabilities: List[float]) -> float:

@@ -52,6 +52,12 @@ class EthicalSimulationVisualizer:
         self.output_dir = output_dir
         self.figsize = figsize
 
+# --- MATHEMATICAL INQUIRY 15: FRACTAL GEOMETRY ---
+# Question: Do moral systems exhibit Self-Similarity across scales? 
+# Could the Hausdorff Dimension of a belief distribution be used to 
+# quantify the complexity of a legal system, and is there a 'Moral Fractal' 
+# that explains how individual micro-choices determine macro-societal collapses?
+
         # Erstelle Output-Verzeichnis falls es nicht existiert
         os.makedirs(self.output_dir, exist_ok=True)
 

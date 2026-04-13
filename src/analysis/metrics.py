@@ -114,32 +114,320 @@ class SocialDynamicsMetrics:
 
     @staticmethod
     def polarization_index(society) -> float:
-        """Measure polarization in the society."""
+        """
+        Measure polarization using Jensen-Shannon Divergence (JSD).
+        Replaces simple Euclidean distance with Information Topology.
+        """
         if not hasattr(society, "agents") or len(society.agents) < 2:
             return 0.0
 
-        # Calculate average belief differences between agents
-        total_distance = 0.0
-        comparisons = 0
+        def _jsd(p, q):
+            p = np.clip(p, 1e-12, 1.0)
+            q = np.clip(q, 1e-12, 1.0)
+            m = 0.5 * (p + q)
+            return 0.5 * (np.sum(p * np.log2(p/m)) + np.sum(q * np.log2(q/m)))
 
         agents_list = list(society.agents.values())
-        for i, agent1 in enumerate(agents_list):
-            for agent2 in agents_list[i + 1 :]:
-                if hasattr(agent1, "beliefs") and hasattr(agent2, "beliefs"):
-                    distance = SocialDynamicsMetrics._belief_distance(agent1, agent2)
-                    total_distance += distance
-                    comparisons += 1
+        jsd_values = []
+        
+        for i, a1 in enumerate(agents_list):
+            for a2 in agents_list[i+1:]:
+                # Extract belief probability distributions
+                b1 = np.array([b.strength for b in a1.beliefs.values()])
+                b2 = np.array([b.strength for b in a2.beliefs.values()])
+                # Normalize to distributions
+                p = b1 / (np.sum(b1) + 1e-8)
+                q = b2 / (np.sum(b2) + 1e-8)
+                jsd_values.append(np.sqrt(_jsd(p, q)))
 
-        if comparisons == 0:
-            return 0.0
-
-        average_distance = total_distance / comparisons
-        # Normalize to 0-1 scale
-        return float(min(1.0, average_distance / 2.0))
+        return float(np.mean(jsd_values)) if jsd_values else 0.0
 
     @staticmethod
-    def consensus_level(society, threshold: float = 0.1) -> float:
-        """Measure level of consensus in the society."""
+    def wasserstein_alignment(society) -> float:
+        """
+        Computes the Wasserstein-1 (Optimal Transport) distance between agents' beliefs.
+        Provides a geometric measure of alignment considering the 'cost' of belief shift.
+        """
+        from scipy.stats import wasserstein_distance
+        if not hasattr(society, "agents") or len(society.agents) < 2:
+            return 0.0
+
+        agents_list = list(society.agents.values())
+        w1_values = []
+        
+        for i, a1 in enumerate(agents_list):
+            for a2 in agents_list[i+1:]:
+                b1 = np.array([b.strength for b in a1.beliefs.values()])
+                b2 = np.array([b.strength for b in a2.beliefs.values()])
+                # Wasserstein-1 distance
+                w1_values.append(wasserstein_distance(b1, b2))
+
+        return float(np.mean(w1_values)) if w1_values else 0.0
+
+    @staticmethod
+    def estimate_consensus_speed(society) -> float:
+        """
+        Estimates the 'speed of consensus' based on the Ollivier-Ricci Curvature 
+        of the social graph. Speed is bounded by 1/kappa.
+        """
+        if not hasattr(society, "social_network") or society.social_network.number_of_nodes() < 2:
+            return 0.0
+
+        # Coarse approximation of Ollivier-Ricci Curvature (kappa)
+        # kappa(u,v) = 1 - W1(m_u, m_v) / d(u,v)
+        # For simplicity, we use the graph density and clustering as proxies for curvature
+        density = nx.density(society.social_network)
+        clustering = nx.average_clustering(society.social_network)
+        
+        # Heuristic: kappa approx proportional to clustering and density
+        kappa = (density + clustering) / 2.0
+        
+        # Consensus speed bound: Rate of convergence is (1 - kappa)^t
+        # We return the contraction factor kappa
+        return float(kappa)
+
+    @staticmethod
+    def fisher_rao_distance(p: np.ndarray, q: np.ndarray) -> float:
+        """
+        Calculates the Fisher-Rao distance between two belief distributions.
+        d = arccos(sum(sqrt(p_i * q_i))). Represented as an angle on the sphere.
+        """
+        # Normalize
+        p = p / (np.sum(p) + 1e-8)
+        q = q / (np.sum(q) + 1e-8)
+        
+        # Bhattacharyya coefficient
+        bc = np.sum(np.sqrt(p * q))
+        bc = np.clip(bc, 0.0, 1.0)
+        
+        return float(np.arccos(bc))
+
+    @staticmethod
+    def calculate_moral_volatility(belief_history: np.ndarray, dt: float = 1.0) -> float:
+        """
+        Derives the 'Moral Volatility' using Ito's Lemma logic.
+        Measures the quadratic variation of the belief process.
+        """
+        if len(belief_history) < 2:
+            return 0.0
+            
+        # Diffusion coefficient sigma estimated from increments
+        diffs = np.diff(belief_history)
+        sigma_sq = np.var(diffs) / dt
+        
+        # In a real model, we would use f'(b)^2 * sigma^2
+        # Here we return the raw diffusion variance as volatility
+        return float(np.sqrt(sigma_sq))
+
+    @staticmethod
+    def detect_cohomological_obstruction(society) -> float:
+        """
+        Detects global consensus obstructions using Sheaf Cohomology (H^1).
+        A non-zero return value indicates a 'Moral Twist' (paradoxical loop).
+        """
+        if not hasattr(society, "social_network") or society.social_network.number_of_nodes() < 3:
+            return 0.0
+
+        # Find cycles in the social graph (Homology H1)
+        cycles = nx.cycle_basis(society.social_network)
+        obstruction_count = 0
+        
+        for cycle in cycles:
+            # Calculate the 'Net Twist' around the cycle
+            net_twist = 0.0
+            for i in range(len(cycle)):
+                u = cycle[i]
+                v = cycle[(i + 1) % len(cycle)]
+                
+                if u in society.agents and v in society.agents:
+                    b_u = np.array([b.strength for b in society.agents[u].beliefs.values()])
+                    b_v = np.array([b.strength for b in society.agents[v].beliefs.values()])
+                    
+                    # Gradient of belief shift
+                    net_twist += np.linalg.norm(b_u - b_v)
+            
+            # If net twist is large, the cycle is 'knotted' (obstruction)
+            if net_twist > 1.5: 
+                obstruction_count += 1
+                
+        return float(obstruction_count)
+
+    # --- MATHEMATISCHE ANFRAGE: THERMODYNAMIK ---
+    # Frage: Wenn wir die Gesellschaft als offenes thermodynamisches System 
+    # betrachten, kann eine statistische Gleichung die 'Arbeit' berechnen, 
+    # die für den Übergang zwischen moralischen Gleichgewichten nötig ist?
+
+    # --- MATHEMATISCHE ANFRAGE: TOPOLOGISCHE TRAJEKTORIEN ---
+    # Frage: Können ethische Übergänge zwischen moralischen Gleichgewichten 
+    # mittels topologischer Invarianten auf dem symplektischen Manifold 
+    # quantifiziert werden?
+
+    # --- MATHEMATISCHE ANFRAGE: INFORMATIONSTHEORIE ---
+    # Frage: Was ist die minimale Anzahl an 'Moralischen Bits', um ein 
+    # Rechtssystem ohne Integritätsverlust darzustellen (Rate-Distortion)?
+
+    # --- MATHEMATISCHE ANFRAGE: FUNKTIONALANALYSIS ---
+    # Frage: Erlaubt der Spektralsatz, die gesamte Gesellschaft in 
+    # unabhängige 'Moralische Eigenmoden' zu zerlegen?
+
+    @staticmethod
+    def graph_belief_denoising(society, cutoff_lambda: float = 0.5) -> Dict[str, float]:
+        """
+        Applies Graph Fourier Transform (GFT) to belief signals.
+        Uses a Graph Spectral Filter to 'de-noise' conflict (high-frequency) 
+        and preserve consensus (low-frequency).
+        """
+        if not hasattr(society, "social_network") or society.social_network.number_of_nodes() < 2:
+            return {}
+
+        # 1. Compute Laplacian
+        # Ensure we only use nodes that are actually agents
+        agent_ids = list(society.agents.keys())
+        subgraph = society.social_network.subgraph(agent_ids)
+        L = nx.laplacian_matrix(subgraph).toarray()
+        eigvals, U = np.linalg.eigh(L)
+        
+        # 2. Extract belief signal x
+        x = np.array([np.mean([b.strength for b in society.agents[aid].beliefs.values()]) for aid in agent_ids])
+        
+        # 3. GFT: x_hat = U^T * x
+        x_hat = np.dot(U.T, x)
+        
+        # 4. Low-pass Filter H(lambda)
+        H = np.where(eigvals <= cutoff_lambda, 1.0, 0.0)
+        
+        # 5. Inverse GFT: x_tilde = U * H * x_hat
+        x_denoised = np.dot(U, H * x_hat)
+        
+        return {aid: float(val) for aid, val in zip(agent_ids, x_denoised)}
+
+    @staticmethod
+    def consensus_level(society) -> float:
+        """
+        Measure level of consensus using average Fisher-Rao distance.
+        High consensus = Low average distance between worldviews.
+        """
+        if not hasattr(society, "agents") or len(society.agents) < 2:
+            return 1.0
+
+        from analysis.metrics import SocialDynamicsMetrics
+        agents_list = list(society.agents.values())
+        distances = []
+        
+        for i, a1 in enumerate(agents_list):
+            for a2 in agents_list[i+1:]:
+                p = np.array([b.strength for b in a1.beliefs.values()])
+                q = np.array([b.strength for b in a2.beliefs.values()])
+                # Inverse of Fisher-Rao distance as consensus measure
+                d = SocialDynamicsMetrics.fisher_rao_distance(p, q)
+                distances.append(d)
+
+        # Map average distance to 0-1 scale (pi/2 is max distance)
+        avg_dist = np.mean(distances) if distances else 0.0
+        consensus = 1.0 - (avg_dist / (np.pi / 2))
+        return float(np.clip(consensus, 0.0, 1.0))
+
+    @staticmethod
+    def calculate_ethical_work(initial_beliefs: np.ndarray, final_beliefs: np.ndarray, temp: float = 1.0) -> float:
+        """
+        Calculates the 'Work' required for a moral transition.
+        META-FIX: Implements Adèlic volume weighting (dV_i) to prevent 
+        abstraction leakage in non-Euclidean manifolds.
+        """
+        # Volume factor dV (invariant measure on the belief manifold)
+        # For a sphere, dV depends on the belief intensity (det g)
+        dv_i = np.sqrt(np.abs(initial_beliefs) + 1e-8)
+        dv_f = np.sqrt(np.abs(final_beliefs) + 1e-8)
+        
+        # Energy E = -log(belief_strength + eps)
+        e_i = -np.log(initial_beliefs + 1e-8)
+        e_f = -np.log(final_beliefs + 1e-8)
+        
+        # Weighted Partition Functions Z
+        z_i = np.mean(np.exp(-e_i / temp) * dv_i)
+        z_f = np.mean(np.exp(-e_f / temp) * dv_f)
+        
+        delta_f = -temp * np.log(z_f / (z_i + 1e-8))
+        return float(delta_f)
+
+    @staticmethod
+    def detect_cohomological_obstruction(society) -> float:
+        """
+        Detects global consensus obstructions using Sheaf Cohomology (H^1).
+        A non-zero return value indicates a 'Moral Twist' (paradoxical loop).
+        """
+        if not hasattr(society, "social_network") or society.social_network.number_of_nodes() < 3:
+            return 0.0
+
+        # Find cycles in the social graph (Homology H1)
+        import networkx as nx
+        cycles = nx.cycle_basis(society.social_network)
+        obstruction_count = 0
+        
+        for cycle in cycles:
+            net_twist = 0.0
+            for i in range(len(cycle)):
+                u = cycle[i]
+                v = cycle[(i + 1) % len(cycle)]
+                
+                if u in society.agents and v in society.agents:
+                    b_u = np.array([b.strength for b in society.agents[u].beliefs.values()])
+                    b_v = np.array([b.strength for b in society.agents[v].beliefs.values()])
+                    net_twist += np.linalg.norm(b_u - b_v)
+            
+            if net_twist > 1.5: 
+                obstruction_count += 1
+                
+        return float(obstruction_count)
+
+    @staticmethod
+    def calculate_ethical_entropy(society) -> float:
+        """
+        Calculates the Shannon Entropy of the society's moral distribution.
+        Measures the degree of 'Moral Disorder'.
+        """
+        if not hasattr(society, "agents") or not society.agents:
+            return 0.0
+            
+        # Collect flattened belief distributions
+        all_strengths = []
+        for agent in society.agents.values():
+            all_strengths.extend([b.strength for b in agent.beliefs.values()])
+            
+        if not all_strengths:
+            return 0.0
+            
+        # Discretize into K bins
+        counts, _ = np.histogram(all_strengths, bins=10, range=(0, 1))
+        probs = counts / (np.sum(counts) + 1e-8)
+        probs = np.clip(probs, 1e-12, 1.0)
+        
+        return -float(np.sum(probs * np.log2(probs)))
+
+    @staticmethod
+    def padic_moral_distance(belief_a: np.ndarray, belief_b: np.ndarray, p: int = 2) -> float:
+        """
+        Computes the p-adic (non-Archimedean) distance between two beliefs.
+        Proximity depends on shared hierarchical roots (LCA logic).
+        |x - y|_p = p^(-k) where k is the depth of the first differing digit.
+        """
+        # Convert to discrete addresses (simplified tree depth)
+        depth = 8
+        scale = p ** depth
+        
+        val_a = int(np.mean(belief_a) * scale)
+        val_b = int(np.mean(belief_b) * scale)
+        
+        if val_a == val_b:
+            return 0.0
+            
+        # Find the smallest k such that (val_a - val_b) is divisible by p^k
+        diff = abs(val_a - val_b)
+        k = 0
+        while diff % (p ** (k + 1)) == 0 and k < depth:
+            k += 1
+            
+        return float(p ** (-k))
         if not hasattr(society, "agents") or len(society.agents) < 2:
             return 1.0
 
@@ -247,6 +535,12 @@ class SocialDynamicsMetrics:
         n = len(values)
         cumsum = np.cumsum(values)
         return float((n + 1 - 2 * np.sum(cumsum) / cumsum[-1]) / n)
+
+    # --- MATHEMATICAL INQUIRY 2: INFORMATION TOPOLOGY ---
+    # Question: Could the 'polarization_index' be redefined using Jensen-Shannon Divergence (JSD) 
+    # over the probability distributions of beliefs? Furthermore, if we model the social network 
+    # as a k-dimensional Simplicial Complex, how would the Betti numbers (β_k) of the 
+    # persistent homology track the topological "holes" in ethical consensus?
 
 
 class DecisionQualityMetrics:

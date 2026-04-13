@@ -43,3 +43,9 @@ class SimulationConfig:
 
 # Globale Instanz
 config = SimulationConfig()
+
+# --- MATHEMATICAL INQUIRY 13: OPTIMAL CONTROL THEORY ---
+# Question: Using Pontryagin's Minimum Principle, what is the 'Optimal Path' 
+# for a social intervention to minimize the total 'Ethical Action' S = int L dt? 
+# Can we define a 'Moral Controller' that stabilizes a society against 
+# extremist 'perturbations'?

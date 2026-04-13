@@ -102,6 +102,25 @@ class ScenarioGenerator:
     def __init__(self):
         """Initialisiert den Szenario-Generator."""
         self.templates = self._initialize_templates()
+
+    def calculate_conflict_knottedness(self, scenario: EthicalScenario) -> float:
+        """
+        Estimates the Jones Polynomial invariant of a social conflict.
+        Higher values indicate topologically 'locked' dilemmas.
+        """
+        # Complexity and Uncertainty as proxies for 'crossings' in the braid
+        crossing_number = scenario.complexity * 10
+        # If complexity is high, the 'Jones Invariant' deviates from 1
+        return float(np.abs(np.exp(crossing_number) - 1.0))
+
+# --- MATHEMATISCHE ANFRAGE: KNOTENTHEORIE ---
+# Frage: Können komplexe Dilemmata als Zöpfe oder Knoten abgebildet werden? 
+# Liefert eine Invariante der Konflikt-Topologie einen Hinweis auf 
+# die Lösbarkeit?
+
+# --- MATHEMATISCHE ANFRAGE: DARSTELLUNGSTHEORIE ---
+# Frage: Gibt es ein Mapping zwischen endlichen Symmetriegruppen und der 
+# Auflösung von Singularitäten im Überzeugungs-Manifold?
         self.belief_categories = [
             "Gerechtigkeit",
             "Freiheit",

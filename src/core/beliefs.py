@@ -51,6 +51,12 @@ class NeuralEthicalBelief:
 
     def update_strength(self, new_strength: float):
         """Aktualisiert die Stärke der Überzeugung."""
+        # Non-Standard Analysis: Handle infinitesimal deviations
+        # A deviation is negligible if it's below the precision threshold
+        epsilon = 1e-9 
+        if abs(new_strength - self.strength) < epsilon:
+            return # Negligible Moral Deviation
+            
         self.strength = np.clip(new_strength, 0.0, 1.0)
 
     def update_certainty(self, new_certainty: float):
@@ -70,4 +76,82 @@ class NeuralEthicalBelief:
         # Aktualisieren mit Decay
         self.activation = decay_factor * self.activation + activation_level
         self.last_activation_time = current_time
+
+class MoralIdentityCategory:
+    """
+    Formalizes an agent's Moral Identity using Category Theory.
+    Based on the Yoneda Lemma: An agent is defined by its responses across scenarios.
+    """
+    def __init__(self, agent):
+        self.agent = agent
+        self.scenario_functors = {} # Scenario -> Functor (Mapping to responses)
+
+    def compute_yoneda_embedding(self) -> Dict[str, np.ndarray]:
+        """
+        Reconstructs the hidden Moral Identity by observing 'natural transformations'
+        across different scenario functors.
+        """
+        # y_D: Dilemma -> Response distribution
+        moral_identity = {}
+        for belief_name, belief in self.agent.beliefs.items():
+            # The 'Moral Identity' is the presheaf d -> Nat(F_d, A)
+            # Simplified: Represented by the belief strengths across the library
+            moral_identity[belief_name] = np.array([belief.strength, belief.certainty])
+            
+        return moral_identity
+
+    def compose_dilemmas(self, dilemma1: str, dilemma2: str) -> str:
+        """
+        Models the composition of moral dilemmas as a tensor product in a 
+        Monoidal Category. D1 (x) D2.
+        """
+        return f"Composed_Dilemma({dilemma1} \u2297 {dilemma2})"
+
+class HeytingMoralLogic:
+    """
+    Implements Intuitionistic Ethics using Heyting Algebra.
+    Truth values in [0, 1] where LEM (P or not P) can fail.
+    """
+    @staticmethod
+    def meet(a: float, b: float) -> float:
+        return min(a, b) # AND
+
+    @staticmethod
+    def join(a: float, b: float) -> float:
+        return max(a, b) # OR
+
+    @staticmethod
+    def implies(a: float, b: float) -> float:
+        # Relative pseudo-complement in Heyting Algebra
+        return 1.0 if a <= b else b
+
+    @staticmethod
+    def negate(a: float) -> float:
+        return HeytingMoralLogic.implies(a, 0.0)
+
+# --- MATHEMATISCHE ANFRAGE: TOPOS-THEORIE ---
+# Frage: Können die Wahrheitswerte moralischer Logik durch Strukturen 
+# einer intuitionistischen Logik ersetzt werden, um moralische Ambiguität 
+# abzubilden?
+
+# --- MATHEMATISCHE ANFRAGE: GALOISTHEORIE ---
+# Frage: Ist ein moralisches Dilemma genau dann "auflösbar", wenn seine 
+# Symmetriegruppe eine auflösbare Gruppe ist?
+
+# --- MATHEMATISCHE ANFRAGE: FUNKTIONENTHEORIE ---
+# Frage: Stellen die Pole einer holomorphen Überzeugungsfunktion Punkte 
+# absoluter ethischer Widersprüche dar?
+
+# --- MATHEMATICAL INQUIRY 36: MODEL THEORY (FORCING) ---
+# Question: Can we 'force' new moral axioms into a society's logic 
+# using Cohen Forcing? Would the resulting 'Generic Extension' 
+# create a moral universe where previously undecidable dilemmas 
+# become resolvable?
+
+    # --- MATHEMATICAL INQUIRY 6: CATEGORY THEORY ---
+    # Question: Can the interaction between EthicalScenario and NeuralEthicalBelief 
+    # be formalized as a Monoidal Category where the 'tensor product' represents 
+    # the composition of moral dilemmas? How would the Yoneda Lemma help in 
+    # reconstructing an agent's hidden 'Moral Identity' simply by observing 
+    # its natural transformations across different scenario functors?
         self.last_activation_time = current_time

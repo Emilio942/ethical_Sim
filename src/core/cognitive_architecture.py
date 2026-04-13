@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 # Import from project modules
 from core.neural_types import NeuralProcessingType
@@ -311,3 +311,153 @@ class CognitiveArchitecture:
     def __str__(self):
         """String-Repräsentation der kognitiven Architektur."""
         return f"Kognitive Architektur: {self.primary_processing} ({self.processing_balance:.2f}) / {self.secondary_processing} ({1-self.processing_balance:.2f})"
+
+    def calculate_moral_option_value(self, b: float, K: float, T: float, sigma: float, r: float = 0.03) -> float:
+        """
+        Applies Black-Scholes to calculate the 'Option Value' of delaying a decision.
+        b: Current belief level, K: Political cost, T: Time to deadline, sigma: Volatility.
+        """
+        from scipy.stats import norm
+        if T <= 0 or sigma <= 0:
+            return max(0.0, b - K)
+            
+        d1 = (np.log(b / (K + 1e-8)) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+        d2 = d1 - sigma * np.sqrt(T)
+        
+        option_value = b * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
+        return float(option_value)
+
+class EthicalScheme:
+    """
+    Models an agent's belief system as an Algebraic Scheme X = Spec(R).
+    Defines 'local' ethical truths via the Structure Sheaf O_X.
+    """
+    def __init__(self, axioms: List[str]):
+        self.axioms = axioms
+        self.ring = {a: 1.0 for a in axioms} # Axiom Ring R
+        
+    def localize_at(self, premise: str) -> Dict[str, float]:
+        """
+        Computes the localization R_f at a specific axiom/premise.
+        Represents reasoning under a local ethical assumption.
+        """
+        if premise not in self.ring:
+            return {}
+        # Localization R_f: All g/f^n
+        f_val = self.ring[premise]
+        return {axiom: val / (f_val + 1e-8) for axiom, val in self.ring.items()}
+
+    def resolve_conflict_via_cone(self, norm_a: np.ndarray, norm_b: np.ndarray) -> np.ndarray:
+        """
+        Synthesizes opposing norms using a Mapping Cone in a 
+        Derived Category. C(phi) = [A -> B].
+        """
+        # Mapping phi: Norm A -> Norm B
+        # The cone represents the 'leftover' tension + synthesis
+        phi = norm_b - norm_a
+        synthesis = norm_b + 0.5 * phi # Synthesis object
+        meta_norm = np.linalg.norm(phi) # The obstruction H1 (shift [1])
+        return np.append(synthesis, meta_norm)
+
+class QuantumZenoArchitecture(CognitiveArchitecture):
+    """
+    Erweiterte kognitive Architektur basierend auf der Quantum Decision Theory.
+    Modelliert den Übergang zwischen System 1 und System 2 als Quantum Zeno Effekt.
+    """
+
+    def __init__(self, num_moral_dimensions: int = 5, measurement_frequency: float = 0.5, **kwargs):
+        super().__init__(**kwargs)
+        self.num_dim = num_moral_dimensions
+        self.num_states = 2 ** num_moral_dimensions
+        self.nu = np.clip(measurement_frequency, 0.0, 1.0) # Messfrequenz (QZE Knob)
+
+        # Initialer Zustand in der Superposition (Hilbert-Raum H)
+        self.psi = np.ones(self.num_states, dtype=complex) / np.sqrt(self.num_states)
+
+        # Unitäre Matrix für System 1 (Intuitive Dynamik)
+        # Erzeuge eine zufällige unitäre Matrix für die "freie Evolution"
+        from scipy.linalg import expm
+        H = np.random.randn(self.num_states, self.num_states) + 1j * np.random.randn(self.num_states, self.num_states)
+        H = (H + H.conj().T) / 2.0 # Hermitesch
+        self.U_system1 = expm(-1j * H * 0.1) # Evolutionsschritt
+
+    def apply_ethical_projection(self, constraints: np.ndarray):
+        """
+        Wendet eine projektive Messung (System 2) an.
+        Führt zum Kollaps der Wellenfunktion in den ethisch zulässigen Unterraum.
+        """
+        if len(constraints) != self.num_states:
+            return
+
+        # Projektionsmatrix P
+        P = np.diag(constraints)
+
+        # Kollaps
+        self.psi = np.dot(P, self.psi)
+        norm = np.linalg.norm(self.psi)
+        if norm > 1e-12:
+            self.psi /= norm
+        else:
+            # Fallback bei totalem Widerspruch: Uniformer Reset
+            self.psi = np.ones(self.num_states, dtype=complex) / np.sqrt(self.num_states)
+
+    def process_information(self, inputs: Dict[str, float], context: Optional[Dict[str, float]] = None) -> Dict[str, float]:
+        """
+        Verarbeitet Informationen mittels Quantum Zeno Dynamik.
+        """
+        # 1. System 1: Unitäre Evolution (Intuition)
+        self.psi = np.dot(self.U_system1, self.psi)
+
+        # 2. System 2: Projektive Messung (Deliberation)
+        # Die Wahrscheinlichkeit der Messung wird durch nu (Frequenz) gesteuert
+        if np.random.random() < self.nu:
+            # Erzeuge Constraints basierend auf dem Kontext (vereinfacht)
+            # 1 = Erlaubt, 0 = Verboten
+            constraints = np.ones(self.num_states)
+            if context and "forbidden_indices" in context:
+                for idx in context["forbidden_indices"]:
+                    if 0 <= idx < self.num_states:
+                        constraints[idx] = 0.0
+
+            self.apply_ethical_projection(constraints)
+
+        # 3. Readout: Extrahiere Wahrscheinlichkeiten für die Entscheidung
+        probabilities = np.abs(self.psi)**2
+
+        # Mappe Wahrscheinlichkeiten zurück auf die Input-Kategorien
+        results = {}
+        for i, (key, value) in enumerate(inputs.items()):
+            if i < self.num_states:
+                results[key] = float(probabilities[i])
+            else:
+                results[key] = value
+
+        return results
+
+    # --- MATHEMATISCHE ANFRAGE: ALGEBRAISCHE GEOMETRIE ---
+    # Frage: Kann das Überzeugungssystem eines Agenten als ein geometrisches 
+    # Objekt (Schema) über einem Ring moralischer Axiome modelliert werden? 
+    # Würde die Strukturgarbe erlauben, lokale Wahrheiten zu definieren, 
+    # die global nicht übereinstimmen?
+
+    # --- MATHEMATISCHE ANFRAGE: MENGENLEHRE ---
+    # Frage: Ist der universelle Kern der Ethik eine stationäre Menge? 
+    # Impliziert das Fodor-Lemma, dass jeder Regulator auf einer großen 
+    # Teilmenge konstant sein muss?
+
+    # --- MATHEMATISCHE ANFRAGE: KATEGORIENTHEORIE ---
+    # Frage: Ist die Beziehung zwischen Gesetzen und moralischen Intuitionen 
+    # ein Paar adjungierter Funktoren?
+    # --- MATHEMATICAL INQUIRY 29: INTER-UNIVERSAL TEICHMÜLLER THEORY ---
+    # Question: Can the 'Moral Anabelio-geometric' structures of different agents 
+    # be linked using Inter-Universal Frobenius transforms? Would this allow 
+    # for a 'Theta-link' that preserves ethical coherence even when agents 
+    # inhabit completely different value-logical universes?
+
+    # --- MATHEMATICAL INQUIRY 5: QUANTUM DECISION THEORY ---
+    # Question: Could the transition between System 1 (Intuitive) and System 2 
+    # (Deliberative) be modeled as a Quantum Zeno Effect? Specifically, if we 
+    # represent the agent's state in a Hilbert Space H, how would the frequency 
+    # of 'Ethical Measurement' (projections) affect the collapse of the wave 
+    # function into a specific moral decision?
+
